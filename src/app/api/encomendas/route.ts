@@ -1,10 +1,23 @@
-import { CAMPOS, MAX_BYTES_FOTO, MAX_FOTOS, validarCampos } from "@/lib/encomendas/validacao";
+import {
+  CAMPOS,
+  MAX_BYTES_ARQUIVO_3D,
+  MAX_BYTES_FOTO,
+  MAX_FOTOS,
+  validarCampos,
+} from "@/lib/encomendas/validacao";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { gerarCodigoDoPedido } from "@/lib/encomendas/codigo";
 import { gravarEncomenda } from "@/lib/firebase/servidor";
-import { credenciaisCloudinary, enviarDoServidor } from "@/lib/servidor/cloudinary";
+import {
+  PASTA_ARQUIVOS_3D,
+  consultarArquivo3d,
+  credenciaisCloudinary,
+  enviarDoServidor,
+  recursoDaUrl,
+  type CredenciaisCloudinary,
+} from "@/lib/servidor/cloudinary";
 import { permitirEnvio } from "@/lib/servidor/limite-de-envios";
-import type { CamposEncomenda } from "@/types/encomenda";
+import type { Arquivo3d, CamposEncomenda } from "@/types/encomenda";
 
 /** Abaixo disso, o formulário foi preenchido rápido demais para ser uma pessoa. */
 const TEMPO_MINIMO_MS = 4000;
@@ -13,6 +26,23 @@ const TAMANHO_MAXIMO_CORPO = 4_400_000;
 
 function erro(mensagem: string, status: number, extra?: object) {
   return Response.json({ erro: mensagem, ...extra }, { status });
+}
+
+/**
+ * O arquivo 3D chega como endereço, já enviado direto ao Cloudinary. Só é
+ * aceito se for um arquivo da pasta de encomendas desta conta e se existir
+ * de fato lá; tamanho e endereço vêm do Cloudinary, não do navegador.
+ */
+async function conferirArquivo3d(
+  src: string,
+  nome: string,
+  credenciais: CredenciaisCloudinary,
+): Promise<Arquivo3d | null> {
+  const recurso = recursoDaUrl(src, credenciais.cloudName);
+  if (!recurso || recurso.tipo !== "raw" || !recurso.publicId.startsWith(`${PASTA_ARQUIVOS_3D}/`)) return null;
+  const real = await consultarArquivo3d(recurso.publicId, credenciais);
+  if (!real || real.bytes > MAX_BYTES_ARQUIVO_3D) return null;
+  return { src: real.src, nome: nome.slice(0, 120) || "modelo-3d", bytes: real.bytes };
 }
 
 /**
@@ -68,18 +98,32 @@ export async function POST(request: Request) {
     return erro("Muitos envios em sequência. Espere alguns minutos e tente de novo.", 429);
   }
 
+  const arquivoSrc = String(form.get("arquivoSrc") ?? "");
+  const arquivoNome = String(form.get("arquivoNome") ?? "").trim();
+
   const chave = process.env.ENCOMENDAS_CHAVE;
   const credenciais = credenciaisCloudinary();
-  if (!chave || !isFirebaseConfigured() || (fotos.length > 0 && !credenciais)) {
+  if (!chave || !isFirebaseConfigured() || ((fotos.length > 0 || arquivoSrc) && !credenciais)) {
     console.error("[encomendas] Configuração incompleta (ENCOMENDAS_CHAVE, Firebase ou Cloudinary).");
     return erro("O recebimento de pedidos está temporariamente indisponível.", 503);
+  }
+
+  let arquivo: Arquivo3d | null = null;
+  if (arquivoSrc) {
+    try {
+      arquivo = await conferirArquivo3d(arquivoSrc, arquivoNome, credenciais!);
+    } catch (falha) {
+      console.error("[encomendas] Falha ao conferir o arquivo 3D:", falha);
+      return erro("Não foi possível conferir o arquivo 3D agora. Tente de novo em instantes.", 502);
+    }
+    if (!arquivo) return erro("O arquivo 3D não foi encontrado. Envie de novo.", 400);
   }
 
   try {
     const fotosEnviadas = await Promise.all(
       fotos.map((foto) => enviarDoServidor(foto, "engenhices/encomendas", credenciais!)),
     );
-    const codigo = await gravarEncomenda({ ...campos, fotos: fotosEnviadas }, chave);
+    const codigo = await gravarEncomenda({ ...campos, fotos: fotosEnviadas, arquivo }, chave);
     return Response.json({ ok: true, codigo });
   } catch (falha) {
     console.error("[encomendas] Falha ao gravar:", falha);

@@ -1,16 +1,17 @@
 import {
   apagarDoServidor,
   credenciaisCloudinary,
-  publicIdDaUrl,
+  recursoDaUrl,
+  type RecursoCloudinary,
 } from "@/lib/servidor/cloudinary";
 import { verificarAdmin } from "@/lib/servidor/verificar-admin";
 
 const MAXIMO_POR_PEDIDO = 50;
 
 /**
- * Apaga fotos do Cloudinary a pedido do /admin (ao apagar uma criação ou um
- * pedido, ou ao remover fotos de uma criação). Só o administrador usa, e só
- * fotos da pasta engenhices/ podem ser apagadas.
+ * Apaga fotos e arquivos 3D do Cloudinary a pedido do /admin (ao apagar uma
+ * criação, um registro ou um pedido, ou ao remover fotos). Só o administrador
+ * usa, e só arquivos da pasta engenhices/ podem ser apagados.
  */
 export async function POST(request: Request) {
   if (!(await verificarAdmin(request))) {
@@ -30,16 +31,16 @@ export async function POST(request: Request) {
     return Response.json({ erro: "Lista de fotos inválida." }, { status: 400 });
   }
 
-  const publicIds = urls.map((url) => publicIdDaUrl(url, credenciais.cloudName));
-  if (publicIds.some((id) => id === null)) {
+  const recursos = urls.map((url) => recursoDaUrl(url, credenciais.cloudName));
+  if (recursos.some((recurso) => recurso === null)) {
     return Response.json({ erro: "Só fotos do site podem ser apagadas." }, { status: 400 });
   }
 
   try {
-    await apagarDoServidor(publicIds as string[], credenciais);
+    await apagarDoServidor(recursos as RecursoCloudinary[], credenciais);
   } catch (falha) {
     console.error("[fotos] Falha ao apagar:", falha);
     return Response.json({ erro: "O Cloudinary não confirmou a exclusão das fotos." }, { status: 502 });
   }
-  return Response.json({ ok: true, apagadas: publicIds.length });
+  return Response.json({ ok: true, apagadas: recursos.length });
 }

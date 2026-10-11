@@ -92,7 +92,7 @@ service cloud.firestore {
     match /encomendas/{id} {
       allow create: if request.resource.data.keys().hasOnly([
             'nome', 'contato', 'descricao', 'finalidade', 'medidas', 'observacoes',
-            'fotos', 'status', 'chave', 'createdAt', 'updatedAt'
+            'linkArquivo', 'fotos', 'arquivo', 'status', 'chave', 'createdAt', 'updatedAt'
           ])
         && request.resource.data.chave
           == get(/databases/$(database)/documents/privado/servidor).data.chave
@@ -102,7 +102,9 @@ service cloud.firestore {
         && textoEntre(request.resource.data.finalidade, 3, 500)
         && textoEntre(request.resource.data.medidas, 0, 300)
         && textoEntre(request.resource.data.observacoes, 0, 1500)
+        && textoEntre(request.resource.data.linkArquivo, 0, 500)
         && request.resource.data.fotos is list && request.resource.data.fotos.size() <= 3
+        && (request.resource.data.arquivo == null || request.resource.data.arquivo is map)
         && request.resource.data.status == 'nova'
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;

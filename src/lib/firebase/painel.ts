@@ -135,6 +135,8 @@ export async function listarEncomendas(): Promise<Encomenda[]> {
         ...dados,
         id: documento.id,
         fotos: dados.fotos ?? [],
+        arquivo: dados.arquivo ?? null,
+        linkArquivo: dados.linkArquivo ?? "",
         createdAt: createdAt?.toDate().toISOString() ?? new Date(0).toISOString(),
         updatedAt: updatedAt?.toDate().toISOString() ?? new Date(0).toISOString(),
       };
@@ -171,11 +173,14 @@ export async function apagarFotos(urls: string[]) {
 }
 
 /**
- * Apaga um pedido e as fotos de referência. As fotos vão primeiro: se algo
+ * Apaga um pedido, as fotos de referência e o arquivo 3D. Os arquivos vão primeiro: se algo
  * falhar no meio, o pedido continua no painel e basta tentar de novo.
  */
-export async function apagarEncomenda(encomenda: Pick<Encomenda, "id" | "fotos">) {
-  await apagarFotos(encomenda.fotos.map((foto) => foto.src));
+export async function apagarEncomenda(encomenda: Pick<Encomenda, "id" | "fotos" | "arquivo">) {
+  await apagarFotos([
+    ...encomenda.fotos.map((foto) => foto.src),
+    ...(encomenda.arquivo ? [encomenda.arquivo.src] : []),
+  ]);
   await deleteDoc(doc(getFirestore(app()), "encomendas", encomenda.id));
 }
 
@@ -201,12 +206,19 @@ export async function avisarSiteAtualizado() {
   }
 }
 
-export type FotoNaoUsada = { src: string; publicId: string; bytes: number; criadaEm: string };
+/** Foto ("image") ou arquivo 3D ("raw") no Cloudinary que nada usa. */
+export type ArquivoNaoUsado = {
+  tipo: "image" | "raw";
+  src: string;
+  publicId: string;
+  bytes: number;
+  criadoEm: string;
+};
 
 export type ResultadoDaVerificacao = {
   total: number;
   recentes: number;
-  naoUsadas: FotoNaoUsada[];
+  naoUsadas: ArquivoNaoUsado[];
 };
 
 /**
@@ -224,6 +236,7 @@ export async function buscarFotosNaoUsadas(): Promise<ResultadoDaVerificacao> {
     ...criacoes.flatMap((criacao) => criacao.images.map((imagem) => imagem.src)),
     ...registros.flatMap((registro) => registro.images.map((imagem) => imagem.src)),
     ...encomendas.flatMap((encomenda) => encomenda.fotos.map((foto) => foto.src)),
+    ...encomendas.flatMap((encomenda) => (encomenda.arquivo ? [encomenda.arquivo.src] : [])),
   ];
 
   const resposta = await fetch("/api/fotos/nao-usadas", {

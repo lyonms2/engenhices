@@ -12,7 +12,7 @@ import {
 import { gerarCodigoDoPedido } from "@/lib/encomendas/codigo";
 import type { Criacao } from "@/types/criacao";
 import type { RegistroLab } from "@/types/laboratorio";
-import type { CamposEncomenda, FotoReferencia } from "@/types/encomenda";
+import type { Arquivo3d, CamposEncomenda, FotoReferencia } from "@/types/encomenda";
 import { getFirebaseApp } from "./client";
 import {
   COLECAO_CRIACOES,
@@ -65,7 +65,7 @@ export async function lerCriacoesPublicas(): Promise<Criacao[]> {
  * documento que ninguém de fora lê; gravar direto no banco é recusado.
  */
 export async function gravarEncomenda(
-  dados: CamposEncomenda & { fotos: FotoReferencia[] },
+  dados: CamposEncomenda & { fotos: FotoReferencia[]; arquivo: Arquivo3d | null },
   chave: string,
 ): Promise<string> {
   // O código do pedido é o id do documento. Se já existir (raríssimo), a

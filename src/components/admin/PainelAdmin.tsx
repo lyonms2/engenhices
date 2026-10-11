@@ -228,7 +228,7 @@ function Painel() {
           ["criacoes", "Criações", 0],
           ["laboratorio", "Laboratório", 0],
           ["encomendas", "Encomendas", novas],
-          ["fotos", "Fotos", 0],
+          ["fotos", "Arquivos", 0],
         ] as const
       ).map(([valor, nome, contagem]) => (
         <button

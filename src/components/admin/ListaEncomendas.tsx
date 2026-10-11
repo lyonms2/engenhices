@@ -22,6 +22,12 @@ import { BuscaEPeriodo, GrupoDeFiltros, Paginacao } from "./BarraDeFiltros";
 import { ConfirmarAcao } from "./ConfirmarAcao";
 import { STATUS_ENCOMENDA, type Encomenda, type StatusEncomenda } from "@/types/encomenda";
 
+function tamanhoDoArquivo(bytes: number): string {
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
 const dataHora = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
 const corDoStatus: Record<StatusEncomenda, string> = {
@@ -266,6 +272,12 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
                       #{codigoParaExibir(encomenda.id)}
                     </span>
                     {encomenda.nome}
+                    {(encomenda.arquivo || encomenda.linkArquivo) && (
+                      <span className="ml-2 border border-laranja-escuro px-1.5 font-mono text-[0.65rem] font-medium tracking-wider text-laranja-escuro uppercase">
+                        3D
+                        <span className="sr-only"> (com arquivo 3D)</span>
+                      </span>
+                    )}
                   </span>
                   <span className="block truncate text-sm text-cinza">{encomenda.descricao}</span>
                 </span>
@@ -283,6 +295,39 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
                   <Detalhe rotulo="O que precisa">{encomenda.descricao}</Detalhe>
                   <Detalhe rotulo="Finalidade">{encomenda.finalidade}</Detalhe>
                   {encomenda.medidas && <Detalhe rotulo="Medidas">{encomenda.medidas}</Detalhe>}
+
+                  {encomenda.arquivo && (
+                    <Detalhe rotulo="Arquivo 3D">
+                      <span className="flex flex-wrap items-center gap-3">
+                        <span className="font-bold break-all">{encomenda.arquivo.nome}</span>
+                        <span className="text-cinza">{tamanhoDoArquivo(encomenda.arquivo.bytes)}</span>
+                        <a
+                          href={encomenda.arquivo.src}
+                          download={encomenda.arquivo.nome}
+                          className="inline-flex min-h-10 items-center bg-laranja px-4 text-sm font-bold text-grafite hover:bg-[#ff7f22]"
+                        >
+                          Baixar
+                        </a>
+                      </span>
+                    </Detalhe>
+                  )}
+
+                  {encomenda.linkArquivo && (
+                    <Detalhe rotulo="Link do arquivo (enviado pelo cliente)">
+                      <a
+                        href={encomenda.linkArquivo}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="font-bold break-all text-laranja-escuro underline underline-offset-4"
+                      >
+                        {encomenda.linkArquivo}
+                        <span className="sr-only"> (abre em nova aba)</span>
+                      </a>
+                      <span className="mt-1 block text-xs text-cinza">
+                        Link externo: confira o endereço antes de abrir.
+                      </span>
+                    </Detalhe>
+                  )}
                   {encomenda.observacoes && <Detalhe rotulo="Observações">{encomenda.observacoes}</Detalhe>}
 
                   {encomenda.fotos.length > 0 && (

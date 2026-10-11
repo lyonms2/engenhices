@@ -10,14 +10,19 @@ const JANELA_MS = 10 * 60 * 1000;
 const MAXIMO_POR_JANELA = 5;
 const envios = new Map<string, number[]>();
 
-export function permitirEnvio(ip: string, agora = Date.now()): boolean {
-  const recentes = (envios.get(ip) ?? []).filter((momento) => agora - momento < JANELA_MS);
+/**
+ * `tipo` separa as contagens: pedir para enviar um arquivo 3D não gasta o
+ * limite de pedidos, e vice-versa.
+ */
+export function permitirEnvio(ip: string, tipo: "pedido" | "arquivo" = "pedido", agora = Date.now()): boolean {
+  const chave = `${tipo}:${ip}`;
+  const recentes = (envios.get(chave) ?? []).filter((momento) => agora - momento < JANELA_MS);
   if (recentes.length >= MAXIMO_POR_JANELA) {
-    envios.set(ip, recentes);
+    envios.set(chave, recentes);
     return false;
   }
   recentes.push(agora);
-  envios.set(ip, recentes);
+  envios.set(chave, recentes);
 
   // Evita crescer sem fim numa instância que fique muito tempo no ar.
   if (envios.size > 5000) envios.clear();

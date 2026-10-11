@@ -1,4 +1,4 @@
-import { credenciaisCloudinary, listarFotosDoSite, publicIdDaUrl } from "@/lib/servidor/cloudinary";
+import { credenciaisCloudinary, listarArquivosDoSite, recursoDaUrl } from "@/lib/servidor/cloudinary";
 import { verificarAdmin } from "@/lib/servidor/verificar-admin";
 
 /** Fotos mais novas que isso podem estar numa edição ainda não salva. */
@@ -23,20 +23,23 @@ export async function POST(request: Request) {
   if (!Array.isArray(corpo?.usadas) || corpo.usadas.some((url) => typeof url !== "string")) {
     return Response.json({ erro: "Lista de fotos em uso inválida." }, { status: 400 });
   }
+  // Chave "tipo:id": uma imagem e um arquivo 3D nunca se confundem.
+  const chave = (recurso: { tipo: string; publicId: string }) => `${recurso.tipo}:${recurso.publicId}`;
   const emUso = new Set(
     (corpo.usadas as string[])
-      .map((url) => publicIdDaUrl(url, credenciais.cloudName))
-      .filter((id): id is string => id !== null),
+      .map((url) => recursoDaUrl(url, credenciais.cloudName))
+      .filter((recurso) => recurso !== null)
+      .map(chave),
   );
 
   try {
-    const todas = await listarFotosDoSite(credenciais);
+    const todos = await listarArquivosDoSite(credenciais);
     const limite = Date.now() - CARENCIA_MS;
-    const recentes = todas.filter((foto) => Date.parse(foto.criadaEm) > limite).length;
-    const naoUsadas = todas.filter(
-      (foto) => !emUso.has(foto.publicId) && Date.parse(foto.criadaEm) <= limite,
+    const recentes = todos.filter((arquivo) => Date.parse(arquivo.criadoEm) > limite).length;
+    const naoUsadas = todos.filter(
+      (arquivo) => !emUso.has(chave(arquivo)) && Date.parse(arquivo.criadoEm) <= limite,
     );
-    return Response.json({ total: todas.length, recentes, naoUsadas });
+    return Response.json({ total: todos.length, recentes, naoUsadas });
   } catch (falha) {
     console.error("[fotos] Falha ao listar:", falha);
     return Response.json({ erro: "Não foi possível listar as fotos no Cloudinary." }, { status: 502 });

@@ -22,6 +22,8 @@ export function correspondeABusca(encomenda: Encomenda, termo: string): boolean 
     encomenda.finalidade,
     encomenda.medidas,
     encomenda.observacoes,
+    encomenda.linkArquivo,
+    encomenda.arquivo?.nome ?? "",
   ];
   if (algumContem(campos, procurado)) return true;
 

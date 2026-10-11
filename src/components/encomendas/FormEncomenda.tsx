@@ -10,10 +10,14 @@ import {
   type ReactNode,
 } from "react";
 import { comprimirImagem } from "@/lib/encomendas/comprimir-imagem";
+import { enviarArquivo3d } from "@/lib/encomendas/enviar-arquivo-3d";
 import {
+  EXTENSOES_3D,
   LIMITES,
+  MAX_BYTES_ARQUIVO_3D,
   MAX_BYTES_FOTO,
   MAX_FOTOS,
+  extensaoDe,
   validarCampos,
   type ErrosEncomenda,
 } from "@/lib/encomendas/validacao";
@@ -35,7 +39,17 @@ const VAZIO: CamposEncomenda = {
   finalidade: "",
   medidas: "",
   observacoes: "",
+  linkArquivo: "",
 };
+
+function tamanhoLegivel(bytes: number): string {
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/** Arquivo 3D escolhido e, se já foi enviado ao Cloudinary, o endereço dele. */
+type Arquivo3dSelecionado = { arquivo: File; enviadoEm?: string };
 
 const campoBase =
   "mt-2 block w-full border bg-white px-3 py-2.5 text-base focus:border-grafite focus-visible:outline-2 focus-visible:outline-laranja";
@@ -46,12 +60,16 @@ export function FormEncomenda() {
   const [fotos, setFotos] = useState<FotoSelecionada[]>([]);
   const [erroFotos, setErroFotos] = useState<string | null>(null);
   const [preparandoFotos, setPreparandoFotos] = useState(false);
+  const [arquivo3d, setArquivo3d] = useState<Arquivo3dSelecionado | null>(null);
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null);
+  const [progresso, setProgresso] = useState<number | null>(null);
   const [consentimento, setConsentimento] = useState(false);
   const [envio, setEnvio] = useState<Envio>({ tipo: "editando" });
   // Momento em que o formulário apareceu: robôs enviam em milissegundos.
   const inicio = useRef(0);
   const resumoRef = useRef<HTMLDivElement>(null);
   const fotosId = useId();
+  const arquivoId = useId();
 
   useEffect(() => {
     inicio.current = Date.now();
@@ -97,6 +115,24 @@ export function FormEncomenda() {
     setPreparandoFotos(false);
   }
 
+  function escolherArquivo(evento: ChangeEvent<HTMLInputElement>) {
+    const escolhido = evento.target.files?.[0];
+    evento.target.value = "";
+    setErroArquivo(null);
+    if (!escolhido) return;
+    if (!extensaoDe(escolhido.name)) {
+      setErroArquivo("Envie um arquivo .stl, .3mf, .obj, .step ou .stp.");
+      return;
+    }
+    if (escolhido.size > MAX_BYTES_ARQUIVO_3D) {
+      setErroArquivo(
+        `O arquivo tem ${tamanhoLegivel(escolhido.size)}, e o limite é 10 MB. Cole um link para ele no campo abaixo.`,
+      );
+      return;
+    }
+    setArquivo3d({ arquivo: escolhido });
+  }
+
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const encontrados = validarCampos(campos);
@@ -107,12 +143,36 @@ export function FormEncomenda() {
       return;
     }
 
+    const site = (evento.currentTarget.elements.namedItem("site") as HTMLInputElement).value;
+
+    // O arquivo 3D vai antes, direto ao Cloudinary. Se o pedido falhar depois,
+    // o endereço fica guardado e o arquivo não é enviado de novo.
+    let arquivoSrc = arquivo3d?.enviadoEm ?? "";
+    if (arquivo3d && !arquivoSrc) {
+      setEnvio({ tipo: "enviando" });
+      setProgresso(0);
+      try {
+        arquivoSrc = await enviarArquivo3d(arquivo3d.arquivo, { inicio: inicio.current, site }, setProgresso);
+        setArquivo3d({ ...arquivo3d, enviadoEm: arquivoSrc });
+      } catch (falha) {
+        setEnvio({ tipo: "falhou", mensagem: (falha as Error).message });
+        resumoRef.current?.focus();
+        return;
+      } finally {
+        setProgresso(null);
+      }
+    }
+
     const corpo = new FormData();
     for (const [campo, valor] of Object.entries(campos)) corpo.append(campo, valor.trim());
+    if (arquivo3d && arquivoSrc) {
+      corpo.append("arquivoSrc", arquivoSrc);
+      corpo.append("arquivoNome", arquivo3d.arquivo.name);
+    }
     for (const foto of fotos) corpo.append("fotos", foto.arquivo);
     corpo.append("consentimento", "sim");
     corpo.append("inicio", String(inicio.current));
-    corpo.append("site", (evento.currentTarget.elements.namedItem("site") as HTMLInputElement).value);
+    corpo.append("site", site);
 
     setEnvio({ tipo: "enviando" });
     try {
@@ -240,6 +300,86 @@ export function FormEncomenda() {
         )}
       </fieldset>
 
+      <fieldset>
+        <legend className="font-bold">
+          Arquivo 3D <span className="font-normal text-cinza">(opcional)</span>
+        </legend>
+        <p className="mt-1 text-sm text-cinza">
+          Se você já tem o modelo da peça: {EXTENSOES_3D.map((extensao) => `.${extensao}`).join(", ")}, até 10 MB.
+        </p>
+
+        {arquivo3d ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3 border border-grafite/15 bg-white px-4 py-3">
+            <span aria-hidden="true" className="font-mono text-xs font-medium tracking-wider text-laranja-escuro uppercase">
+              {extensaoDe(arquivo3d.arquivo.name)}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm font-bold">{arquivo3d.arquivo.name}</span>
+            <span className="text-sm text-cinza">{tamanhoLegivel(arquivo3d.arquivo.size)}</span>
+            {progresso === null && (
+              <button
+                type="button"
+                onClick={() => setArquivo3d(null)}
+                className="text-sm font-bold text-red-800 underline-offset-4 hover:underline"
+              >
+                Remover
+              </button>
+            )}
+            {progresso !== null && (
+              <div
+                role="progressbar"
+                aria-label="Envio do arquivo 3D"
+                aria-valuenow={progresso}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-1.5 w-full bg-grafite/10"
+              >
+                <div className="h-full bg-laranja transition-[width]" style={{ width: `${progresso}%` }} />
+              </div>
+            )}
+          </div>
+        ) : (
+          <label
+            htmlFor={arquivoId}
+            className="mt-3 inline-flex min-h-11 cursor-pointer items-center border border-dashed border-grafite/40 bg-white px-5 text-sm font-bold hover:border-grafite has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-laranja"
+          >
+            Escolher arquivo 3D
+            <input
+              id={arquivoId}
+              type="file"
+              accept={EXTENSOES_3D.map((extensao) => `.${extensao}`).join(",")}
+              onChange={escolherArquivo}
+              className="sr-only"
+            />
+          </label>
+        )}
+        {erroArquivo && (
+          <p role="alert" className="mt-2 text-sm text-red-800">
+            {erroArquivo}
+          </p>
+        )}
+
+        <div className="mt-5">
+          <Campo
+            nome="linkArquivo"
+            rotulo="Ou um link para o arquivo"
+            opcional
+            erro={erros.linkArquivo}
+            ajuda="Para arquivos maiores: Google Drive, Dropbox, Printables, Thingiverse. Deixe o link aberto para quem tiver o endereço."
+          >
+            {(props) => (
+              <input
+                {...props}
+                type="url"
+                inputMode="url"
+                placeholder="https://"
+                value={campos.linkArquivo}
+                onChange={(e) => alterar("linkArquivo", e.target.value)}
+              />
+            )}
+          </Campo>
+        </div>
+      </fieldset>
+
       <Campo nome="observacoes" rotulo="Observações" opcional erro={erros.observacoes} ajuda="Prazo desejado, cor, quantidade ou outro detalhe.">
         {(props) => <textarea {...props} rows={3} value={campos.observacoes} onChange={(e) => alterar("observacoes", e.target.value)} />}
       </Campo>
@@ -270,7 +410,11 @@ export function FormEncomenda() {
         disabled={enviando || preparandoFotos}
         className="inline-flex min-h-12 w-full items-center justify-center bg-laranja px-6 text-base font-bold text-grafite transition-colors hover:bg-[#ff7f22] disabled:opacity-60 sm:w-auto"
       >
-        {enviando ? "Enviando…" : "Enviar pedido de orçamento"}
+        {progresso !== null
+          ? `Enviando arquivo 3D… ${progresso}%`
+          : enviando
+            ? "Enviando…"
+            : "Enviar pedido de orçamento"}
       </button>
     </form>
   );

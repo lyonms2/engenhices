@@ -24,13 +24,21 @@ function tamanho(bytes: number): string {
     : `${Math.max(1, Math.round(bytes / 1000))} KB`;
 }
 
-function pasta(publicId: string): string {
-  return publicId.includes("/encomendas/") ? "Pedido" : "Criação";
+function origem(publicId: string): string {
+  if (publicId.includes("/encomendas-arquivos/")) return "Arquivo 3D de pedido";
+  if (publicId.includes("/encomendas/")) return "Foto de pedido";
+  if (publicId.includes("/laboratorio/")) return "Laboratório";
+  return "Criação";
+}
+
+function plural(quantidade: number, singular: string, varios: string): string {
+  return `${quantidade} ${quantidade === 1 ? singular : varios}`;
 }
 
 /**
- * Encontra e apaga fotos do Cloudinary que nenhuma criação ou pedido usa
- * (sobras de edições abandonadas). Mostra as fotos antes de apagar.
+ * Encontra e apaga fotos e arquivos 3D do Cloudinary que nenhuma criação,
+ * registro do Laboratório ou pedido usa (sobras de edições abandonadas ou de
+ * envios não concluídos). Mostra tudo antes de apagar.
  */
 export function LimpezaFotos() {
   const [estado, setEstado] = useState<Estado>({ tipo: "inicio" });
@@ -49,11 +57,11 @@ export function LimpezaFotos() {
 
   return (
     <div className="max-w-3xl">
-      <h2 className="text-2xl font-extrabold">Fotos não usadas</h2>
+      <h2 className="text-2xl font-extrabold">Fotos e arquivos não usados</h2>
       <p className="mt-2 text-sm leading-relaxed text-cinza">
-        Procura no Cloudinary fotos que nenhuma criação ou pedido usa, como as de uma edição
-        fechada sem salvar. Fotos enviadas nas últimas 24 horas não entram, porque podem estar
-        numa edição em andamento.
+        Procura no Cloudinary fotos e arquivos 3D que nenhuma criação, registro ou pedido usa,
+        como os de uma edição fechada sem salvar ou de um pedido não concluído. O que foi
+        enviado nas últimas 24 horas não entra, porque pode estar numa edição em andamento.
       </p>
 
       {estado.tipo !== "resultado" && (
@@ -63,7 +71,7 @@ export function LimpezaFotos() {
           disabled={estado.tipo === "verificando"}
           className="mt-6 inline-flex min-h-11 items-center bg-laranja px-5 text-sm font-bold text-grafite hover:bg-[#ff7f22] disabled:opacity-60"
         >
-          {estado.tipo === "verificando" ? "Verificando…" : "Procurar fotos não usadas"}
+          {estado.tipo === "verificando" ? "Verificando…" : "Procurar o que não é usado"}
         </button>
       )}
 
@@ -75,7 +83,7 @@ export function LimpezaFotos() {
 
       {estado.tipo === "limpo" && (
         <p role="status" className="mt-4 border-l-2 border-laranja bg-white px-4 py-3 text-sm">
-          {estado.apagadas} {estado.apagadas === 1 ? "foto apagada" : "fotos apagadas"}, liberando{" "}
+          {plural(estado.apagadas, "item apagado", "itens apagados")}, liberando{" "}
           {tamanho(estado.bytes)}.
         </p>
       )}
@@ -101,50 +109,56 @@ function Resultado({
   onLimpo: (apagadas: number, bytes: number) => void;
 }) {
   const { naoUsadas, total, recentes } = resultado;
-  const bytes = naoUsadas.reduce((soma, foto) => soma + foto.bytes, 0);
+  const bytes = naoUsadas.reduce((soma, item) => soma + item.bytes, 0);
 
   return (
     <div role="status" className="mt-6">
       <p className="text-sm text-cinza">
-        {total} {total === 1 ? "foto" : "fotos"} no Cloudinary
-        {recentes > 0 && ` (${recentes} enviada${recentes === 1 ? "" : "s"} nas últimas 24 horas, fora da verificação)`}.
+        {plural(total, "item", "itens")} no Cloudinary
+        {recentes > 0 && ` (${plural(recentes, "enviado", "enviados")} nas últimas 24 horas, fora da verificação)`}.
       </p>
 
       {naoUsadas.length === 0 ? (
         <p className="mt-4 border-l-2 border-laranja bg-white px-4 py-3 text-sm font-bold">
-          Nenhuma foto sobrando. Está tudo em uso.
+          Nada sobrando. Está tudo em uso.
         </p>
       ) : (
         <>
           <p className="mt-4 font-bold">
-            {naoUsadas.length} {naoUsadas.length === 1 ? "foto não usada" : "fotos não usadas"} (
-            {tamanho(bytes)}):
+            {plural(naoUsadas.length, "item não usado", "itens não usados")} ({tamanho(bytes)}):
           </p>
           <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
-            {naoUsadas.map((foto) => (
-              <li key={foto.publicId} className="text-xs text-cinza">
-                <a href={foto.src} target="_blank" rel="noopener noreferrer" className="block">
-                  <Image
-                    src={foto.src}
-                    alt={`Foto não usada enviada em ${dataCurta.format(new Date(foto.criadaEm))}`}
-                    width={160}
-                    height={160}
-                    sizes="160px"
-                    className="aspect-square w-full border border-grafite/15 bg-[#e7e3db] object-cover"
-                  />
+            {naoUsadas.map((item) => (
+              <li key={`${item.tipo}:${item.publicId}`} className="text-xs text-cinza">
+                <a href={item.src} target="_blank" rel="noopener noreferrer" className="block">
+                  {item.tipo === "image" ? (
+                    <Image
+                      src={item.src}
+                      alt={`Foto não usada enviada em ${dataCurta.format(new Date(item.criadoEm))}`}
+                      width={160}
+                      height={160}
+                      sizes="160px"
+                      className="aspect-square w-full border border-grafite/15 bg-[#e7e3db] object-cover"
+                    />
+                  ) : (
+                    <span className="flex aspect-square w-full flex-col items-center justify-center gap-1 border border-grafite/15 bg-[#e7e3db] font-mono text-grafite">
+                      <span className="text-sm font-medium uppercase">{item.publicId.split(".").pop()}</span>
+                      <span>{tamanho(item.bytes)}</span>
+                    </span>
+                  )}
                 </a>
                 <span className="mt-1 block">
-                  {pasta(foto.publicId)} · {dataCurta.format(new Date(foto.criadaEm))}
+                  {origem(item.publicId)} · {dataCurta.format(new Date(item.criadoEm))}
                 </span>
               </li>
             ))}
           </ul>
           <div className="mt-5">
             <ConfirmarAcao
-              rotulo={`Apagar ${naoUsadas.length} ${naoUsadas.length === 1 ? "foto" : "fotos"}`}
-              pergunta={`Apagar ${naoUsadas.length} ${naoUsadas.length === 1 ? "foto não usada" : "fotos não usadas"} do Cloudinary?`}
+              rotulo={`Apagar ${plural(naoUsadas.length, "item", "itens")}`}
+              pergunta={`Apagar ${plural(naoUsadas.length, "item não usado", "itens não usados")} do Cloudinary?`}
               onConfirmar={async () => {
-                await apagarFotosEmLotes(naoUsadas.map((foto) => foto.src));
+                await apagarFotosEmLotes(naoUsadas.map((item) => item.src));
                 onLimpo(naoUsadas.length, bytes);
               }}
             />

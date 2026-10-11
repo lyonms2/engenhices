@@ -26,11 +26,22 @@ export type CamposEncomenda = {
   finalidade: string;
   medidas: string;
   observacoes: string;
+  /** Link para um arquivo 3D maior que o limite de envio (Drive, Printables…). */
+  linkArquivo: string;
+};
+
+/** Modelo 3D enviado pelo cliente direto ao Cloudinary. */
+export type Arquivo3d = {
+  src: string;
+  /** Nome original, para o administrador reconhecer o arquivo. */
+  nome: string;
+  bytes: number;
 };
 
 export type Encomenda = CamposEncomenda & {
   id: string;
   fotos: FotoReferencia[];
+  arquivo: Arquivo3d | null;
   status: StatusEncomenda;
   /** ISO 8601. */
   createdAt: string;
