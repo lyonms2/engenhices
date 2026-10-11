@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
   SlugEmUsoError,
+  apagarCriacao,
+  avisarSiteAtualizado,
   codigoDoErro,
   salvarCriacao,
   type DadosCriacao,
 } from "@/lib/firebase/painel";
 import { gerarSlug } from "@/lib/utils";
+import { ConfirmarAcao } from "./ConfirmarAcao";
 import { GerenciadorFotos } from "./GerenciadorFotos";
 import {
   CATEGORIAS,
@@ -22,6 +25,8 @@ type FormCriacaoProps = {
   criacao?: Criacao;
   onSalvo: () => void;
   onCancelar: () => void;
+  /** Chamado depois de apagar a criação em edição. */
+  onApagado: () => void;
 };
 
 const STATUS: Record<StatusCriacao, string> = {
@@ -33,7 +38,7 @@ const STATUS: Record<StatusCriacao, string> = {
 const campo =
   "mt-2 block w-full border border-grafite/20 bg-white px-3 py-2.5 text-base focus:border-grafite focus-visible:outline-2 focus-visible:outline-laranja";
 
-export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) {
+export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCriacaoProps) {
   const novo = !criacao;
   const [title, setTitle] = useState(criacao?.title ?? "");
   const [slug, setSlug] = useState(criacao?.slug ?? "");
@@ -51,6 +56,42 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
   const [erro, setErro] = useState<string | null>(null);
 
   const slugFinal = novo && !slugEditado ? gerarSlug(title) : slug;
+
+  // Retrato do formulário, para saber se há alterações não salvas.
+  const retrato = (valores: {
+    title: string; description: string; category: Categoria; status: StatusCriacao;
+    featured: boolean; youtubeUrl: string; tiktokUrl: string; mercadoLivreUrl: string;
+    images: ImagemCriacao[];
+  }) => JSON.stringify(valores);
+  const [retratoInicial] = useState(() =>
+    retrato({
+      title: criacao?.title ?? "",
+      description: criacao?.description ?? "",
+      category: criacao?.category ?? "utilidades",
+      status: criacao?.status ?? "rascunho",
+      featured: criacao?.featured ?? false,
+      youtubeUrl: criacao?.youtubeUrl ?? "",
+      tiktokUrl: criacao?.tiktokUrl ?? "",
+      mercadoLivreUrl: criacao?.mercadoLivreUrl ?? "",
+      images: criacao?.images ?? [],
+    }),
+  );
+  const alterado =
+    retrato({ title, description, category, status, featured, youtubeUrl, tiktokUrl, mercadoLivreUrl, images }) !==
+    retratoInicial;
+
+  // Avisa antes de fechar ou recarregar a aba com alterações não salvas.
+  useEffect(() => {
+    if (!alterado || salvando) return;
+    const avisar = (evento: BeforeUnloadEvent) => evento.preventDefault();
+    window.addEventListener("beforeunload", avisar);
+    return () => window.removeEventListener("beforeunload", avisar);
+  }, [alterado, salvando]);
+
+  function cancelar() {
+    if (alterado && !window.confirm("Descartar as alterações não salvas?")) return;
+    onCancelar();
+  }
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault();
@@ -77,6 +118,7 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
     setSalvando(true);
     try {
       await salvarCriacao(dados, { novo, createdAt: criacao?.createdAt });
+      await avisarSiteAtualizado();
       onSalvo();
     } catch (falha) {
       if (falha instanceof SlugEmUsoError) setErro(falha.message);
@@ -92,7 +134,7 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
     <form onSubmit={enviar} className="space-y-6">
       <h2 className="text-2xl font-extrabold">{novo ? "Nova criação" : `Editar: ${criacao.title}`}</h2>
 
-      <Campo rotulo="Título">
+      <Campo rotulo="Título" contador={{ atual: title.length, maximo: 120 }}>
         <input required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} className={campo} />
       </Campo>
 
@@ -122,7 +164,11 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
         </div>
       </Campo>
 
-      <Campo rotulo="Descrição">
+      <Campo
+        rotulo="Descrição"
+        ajuda="Deixe uma linha em branco entre parágrafos. Textos longos aparecem com “Ver mais”."
+        contador={{ atual: description.length, maximo: 2000 }}
+      >
         <textarea
           rows={5}
           maxLength={2000}
@@ -200,20 +246,61 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
         </button>
         <button
           type="button"
-          onClick={onCancelar}
+          onClick={cancelar}
           className="inline-flex min-h-11 items-center justify-center border border-grafite/25 px-6 text-sm font-bold hover:border-grafite"
         >
           Cancelar
         </button>
+        {alterado && !salvando && (
+          <p className="self-center text-sm text-cinza">Alterações não salvas.</p>
+        )}
       </div>
+
+      {!novo && (
+        <div className="border-t border-grafite/10 pt-6">
+          <p className="text-sm text-cinza">
+            Prefira <strong>Arquivado</strong> para tirar de linha: a página continua no ar e os links
+            divulgados não quebram. Apagar remove a criação do site de vez.
+          </p>
+          <div className="mt-2">
+            <ConfirmarAcao
+              rotulo="Apagar criação"
+              pergunta={`Apagar "${criacao.title}"?`}
+              onConfirmar={async () => {
+                await apagarCriacao(criacao.slug);
+                await avisarSiteAtualizado();
+                onApagado();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </form>
   );
 }
 
-function Campo({ rotulo, ajuda, children }: { rotulo: string; ajuda?: string; children: ReactNode }) {
+function Campo({
+  rotulo,
+  ajuda,
+  contador,
+  children,
+}: {
+  rotulo: string;
+  ajuda?: string;
+  contador?: { atual: number; maximo: number };
+  children: ReactNode;
+}) {
+  const perto = contador && contador.atual > contador.maximo * 0.9;
   return (
     <label className="block">
-      <span className="font-bold">{rotulo}</span>
+      <span className="flex items-baseline justify-between gap-4">
+        <span className="font-bold">{rotulo}</span>
+        {contador && (
+          <span className={`font-mono text-xs ${perto ? "font-bold text-laranja-escuro" : "text-cinza"}`}>
+            {contador.atual} / {contador.maximo}
+          </span>
+        )}
+      </span>
       {children}
       {ajuda && <span className="mt-1.5 block text-sm text-cinza">{ajuda}</span>}
     </label>

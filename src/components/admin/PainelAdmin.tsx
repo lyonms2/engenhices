@@ -1,6 +1,7 @@
 "use client";
 
 import type { User } from "firebase/auth";
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
@@ -12,7 +13,7 @@ import {
   observarUsuario,
   sair,
 } from "@/lib/firebase/painel";
-import { CATEGORIAS, type Criacao } from "@/types/criacao";
+import { CATEGORIAS, type Criacao, type StatusCriacao } from "@/types/criacao";
 import { FormCriacao } from "./FormCriacao";
 import { ListaEncomendas } from "./ListaEncomendas";
 
@@ -33,6 +34,12 @@ const ERROS_DE_LOGIN: Record<string, string> = {
     "Este domínio não está autorizado (Firebase → Authentication → Settings → Authorized domains).",
   "auth/popup-blocked": "O navegador bloqueou a janela de login. Permita pop-ups para este site.",
   "auth/network-request-failed": "Sem conexão com o Firebase. Verifique a internet.",
+};
+
+const SITUACAO: Record<StatusCriacao, { nome: string; cor: string }> = {
+  publicado: { nome: "Publicado", cor: "bg-laranja text-grafite" },
+  rascunho: { nome: "Rascunho", cor: "bg-grafite/10 text-grafite" },
+  arquivado: { nome: "Arquivado", cor: "bg-grafite/10 text-cinza" },
 };
 
 const botaoPrimario =
@@ -166,6 +173,10 @@ function Painel() {
           <FormCriacao
             criacao={edicao === "nova" ? undefined : edicao}
             onCancelar={() => setEdicao(null)}
+            onApagado={() => {
+              setEdicao(null);
+              void carregar(estado.usuario);
+            }}
             onSalvo={() => {
               setEdicao(null);
               void carregar(estado.usuario);
@@ -224,7 +235,7 @@ function Painel() {
         <div>
           <h2 className="text-2xl font-extrabold">Criações</h2>
           <p className="mt-1 text-sm text-cinza">
-            Alterações aparecem no site em até alguns minutos.
+            O site é atualizado assim que você salva.
           </p>
         </div>
         <button type="button" onClick={() => setEdicao("nova")} className={botaoPrimario}>
@@ -239,12 +250,38 @@ function Painel() {
       ) : (
         <ul className="mt-8 divide-y divide-grafite/10 border-y border-grafite/10">
           {estado.criacoes.map((criacao) => (
-            <li key={criacao.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
-              <div>
+            <li key={criacao.id} className="flex flex-wrap items-center gap-4 py-4">
+              {criacao.images[0] ? (
+                <Image
+                  src={criacao.images[0].src}
+                  alt=""
+                  width={criacao.images[0].width}
+                  height={criacao.images[0].height}
+                  sizes="64px"
+                  className="size-16 shrink-0 bg-[#e7e3db] object-cover"
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="flex size-16 shrink-0 items-center justify-center bg-[#e7e3db] font-mono text-[0.6rem] text-cinza uppercase"
+                >
+                  Sem foto
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
                 <p className="font-bold">{criacao.title}</p>
-                <p className="mt-1 font-mono text-xs text-cinza">
-                  {CATEGORIAS[criacao.category]} · {criacao.status}
-                  {criacao.featured && " · destaque"}
+                <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                  <span
+                    className={`px-2 py-0.5 font-mono tracking-wider uppercase ${SITUACAO[criacao.status].cor}`}
+                  >
+                    {SITUACAO[criacao.status].nome}
+                  </span>
+                  {criacao.featured && (
+                    <span className="border border-laranja px-2 py-0.5 font-mono tracking-wider text-laranja-escuro uppercase">
+                      Destaque
+                    </span>
+                  )}
+                  <span className="text-cinza">{CATEGORIAS[criacao.category]}</span>
                 </p>
               </div>
               <div className="flex gap-2">

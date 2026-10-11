@@ -9,8 +9,14 @@ import {
   mensagemDeResposta,
 } from "@/lib/encomendas/contato";
 import { codigoParaExibir } from "@/lib/encomendas/validacao";
-import { codigoDoErro, listarEncomendas, mudarStatusEncomenda } from "@/lib/firebase/painel";
+import {
+  apagarEncomenda,
+  codigoDoErro,
+  listarEncomendas,
+  mudarStatusEncomenda,
+} from "@/lib/firebase/painel";
 import { cn } from "@/lib/utils";
+import { ConfirmarAcao } from "./ConfirmarAcao";
 import { STATUS_ENCOMENDA, type Encomenda, type StatusEncomenda } from "@/types/encomenda";
 
 const dataHora = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -28,9 +34,20 @@ type Estado =
   | { tipo: "erro"; mensagem: string }
   | { tipo: "pronto"; encomendas: Encomenda[] };
 
+/** Concluídas e recusadas saem da frente; o resto ainda pede atenção. */
+const ENCERRADAS: StatusEncomenda[] = ["concluida", "recusada"];
+type Filtro = "abertas" | "encerradas" | "todas";
+
+function passaNoFiltro(encomenda: Encomenda, filtro: Filtro): boolean {
+  if (filtro === "todas") return true;
+  const encerrada = ENCERRADAS.includes(encomenda.status);
+  return filtro === "encerradas" ? encerrada : !encerrada;
+}
+
 export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) => void }) {
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
   const [aberta, setAberta] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<Filtro>("abertas");
 
   useEffect(() => {
     let ativo = true;
@@ -69,6 +86,15 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
     }
   }
 
+  async function apagar(encomenda: Encomenda) {
+    if (estado.tipo !== "pronto") return;
+    await apagarEncomenda(encomenda.id);
+    const restantes = estado.encomendas.filter((item) => item.id !== encomenda.id);
+    setEstado({ tipo: "pronto", encomendas: restantes });
+    onContagem?.(restantes.filter((item) => item.status === "nova").length);
+    setAberta(null);
+  }
+
   if (estado.tipo === "carregando") return <p className="text-cinza">Carregando encomendas…</p>;
   if (estado.tipo === "erro") return <p className="text-sm text-red-800">{estado.mensagem}</p>;
 
@@ -80,90 +106,136 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
     );
   }
 
+  const visiveis = estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, filtro));
+  const contagem = (opcao: Filtro) =>
+    estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, opcao)).length;
+
   return (
-    <ul className="space-y-3">
-      {estado.encomendas.map((encomenda) => {
-        const expandida = aberta === encomenda.id;
-        return (
-          <li key={encomenda.id} className="border border-grafite/10 bg-white">
-            <button
-              type="button"
-              aria-expanded={expandida}
-              onClick={() => setAberta(expandida ? null : encomenda.id)}
-              className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 text-left hover:bg-grafite/[0.03]"
-            >
-              <span
-                className={cn(
-                  "px-2 py-1 font-mono text-[0.68rem] tracking-wider uppercase",
-                  corDoStatus[encomenda.status],
-                )}
-              >
-                {STATUS_ENCOMENDA[encomenda.status]}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-bold">
-                  <span className="mr-2 font-mono text-sm font-medium text-cinza">
-                    #{codigoParaExibir(encomenda.id)}
-                  </span>
-                  {encomenda.nome}
-                </span>
-                <span className="block truncate text-sm text-cinza">{encomenda.descricao}</span>
-              </span>
-              <span className="font-mono text-xs text-cinza">
-                {dataHora.format(new Date(encomenda.createdAt))}
-              </span>
-            </button>
-
-            {expandida && (
-              <div className="space-y-5 border-t border-grafite/10 px-4 py-5 text-sm">
-                <Detalhe rotulo="Contato">
-                  <span className="select-all font-bold">{encomenda.contato}</span>
-                  <BotaoResponder encomenda={encomenda} />
-                </Detalhe>
-                <Detalhe rotulo="O que precisa">{encomenda.descricao}</Detalhe>
-                <Detalhe rotulo="Finalidade">{encomenda.finalidade}</Detalhe>
-                {encomenda.medidas && <Detalhe rotulo="Medidas">{encomenda.medidas}</Detalhe>}
-                {encomenda.observacoes && <Detalhe rotulo="Observações">{encomenda.observacoes}</Detalhe>}
-
-                {encomenda.fotos.length > 0 && (
-                  <Detalhe rotulo="Fotos de referência">
-                    <span className="mt-1 flex flex-wrap gap-3">
-                      {encomenda.fotos.map((foto, indice) => (
-                        <a key={foto.src} href={foto.src} target="_blank" rel="noopener noreferrer">
-                          <Image
-                            src={foto.src}
-                            alt={`Foto de referência ${indice + 1}`}
-                            width={foto.width}
-                            height={foto.height}
-                            sizes="128px"
-                            className="size-32 border border-grafite/15 object-cover"
-                          />
-                        </a>
-                      ))}
-                    </span>
-                  </Detalhe>
-                )}
-
-                <label className="block max-w-xs">
-                  <span className="font-mono text-xs tracking-wider text-cinza uppercase">Situação</span>
-                  <select
-                    value={encomenda.status}
-                    onChange={(e) => void mudarStatus(encomenda, e.target.value as StatusEncomenda)}
-                    className="mt-1 block w-full border border-grafite/20 bg-white px-3 py-2 text-base"
-                  >
-                    {Object.entries(STATUS_ENCOMENDA).map(([valor, nome]) => (
-                      <option key={valor} value={valor}>
-                        {nome}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+    <>
+      <div role="group" aria-label="Filtrar pedidos" className="mb-5 flex flex-wrap gap-2">
+        {(
+          [
+            ["abertas", "Abertos"],
+            ["encerradas", "Encerrados"],
+            ["todas", "Todos"],
+          ] as const
+        ).map(([valor, nome]) => (
+          <button
+            key={valor}
+            type="button"
+            aria-pressed={filtro === valor}
+            onClick={() => setFiltro(valor)}
+            className={cn(
+              "inline-flex min-h-10 items-center gap-2 border px-4 text-sm font-bold",
+              filtro === valor
+                ? "border-grafite bg-grafite text-branco"
+                : "border-grafite/20 bg-white hover:border-grafite",
             )}
-          </li>
-        );
-      })}
-    </ul>
+          >
+            {nome}
+            <span className="font-mono text-xs font-medium opacity-70">{contagem(valor)}</span>
+          </button>
+        ))}
+      </div>
+
+      {visiveis.length === 0 && (
+        <p className="border border-dashed border-grafite/20 px-6 py-10 text-center text-cinza">
+          {filtro === "abertas" ? "Nenhum pedido em aberto." : "Nenhum pedido aqui."}
+        </p>
+      )}
+
+      <ul className="space-y-3">
+        {visiveis.map((encomenda) => {
+          const expandida = aberta === encomenda.id;
+          return (
+            <li key={encomenda.id} className="border border-grafite/10 bg-white">
+              <button
+                type="button"
+                aria-expanded={expandida}
+                onClick={() => setAberta(expandida ? null : encomenda.id)}
+                className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 text-left hover:bg-grafite/[0.03]"
+              >
+                <span
+                  className={cn(
+                    "px-2 py-1 font-mono text-[0.68rem] tracking-wider uppercase",
+                    corDoStatus[encomenda.status],
+                  )}
+                >
+                  {STATUS_ENCOMENDA[encomenda.status]}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold">
+                    <span className="mr-2 font-mono text-sm font-medium text-cinza">
+                      #{codigoParaExibir(encomenda.id)}
+                    </span>
+                    {encomenda.nome}
+                  </span>
+                  <span className="block truncate text-sm text-cinza">{encomenda.descricao}</span>
+                </span>
+                <span className="font-mono text-xs text-cinza">
+                  {dataHora.format(new Date(encomenda.createdAt))}
+                </span>
+              </button>
+
+              {expandida && (
+                <div className="space-y-5 border-t border-grafite/10 px-4 py-5 text-sm">
+                  <Detalhe rotulo="Contato">
+                    <span className="select-all font-bold">{encomenda.contato}</span>
+                    <BotaoResponder encomenda={encomenda} />
+                  </Detalhe>
+                  <Detalhe rotulo="O que precisa">{encomenda.descricao}</Detalhe>
+                  <Detalhe rotulo="Finalidade">{encomenda.finalidade}</Detalhe>
+                  {encomenda.medidas && <Detalhe rotulo="Medidas">{encomenda.medidas}</Detalhe>}
+                  {encomenda.observacoes && <Detalhe rotulo="Observações">{encomenda.observacoes}</Detalhe>}
+
+                  {encomenda.fotos.length > 0 && (
+                    <Detalhe rotulo="Fotos de referência">
+                      <span className="mt-1 flex flex-wrap gap-3">
+                        {encomenda.fotos.map((foto, indice) => (
+                          <a key={foto.src} href={foto.src} target="_blank" rel="noopener noreferrer">
+                            <Image
+                              src={foto.src}
+                              alt={`Foto de referência ${indice + 1}`}
+                              width={foto.width}
+                              height={foto.height}
+                              sizes="128px"
+                              className="size-32 border border-grafite/15 object-cover"
+                            />
+                          </a>
+                        ))}
+                      </span>
+                    </Detalhe>
+                  )}
+
+                  <label className="block max-w-xs">
+                    <span className="font-mono text-xs tracking-wider text-cinza uppercase">Situação</span>
+                    <select
+                      value={encomenda.status}
+                      onChange={(e) => void mudarStatus(encomenda, e.target.value as StatusEncomenda)}
+                      className="mt-1 block w-full border border-grafite/20 bg-white px-3 py-2 text-base"
+                    >
+                      {Object.entries(STATUS_ENCOMENDA).map(([valor, nome]) => (
+                        <option key={valor} value={valor}>
+                          {nome}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="border-t border-grafite/10 pt-4">
+                    <ConfirmarAcao
+                      rotulo="Apagar pedido"
+                      pergunta={`Apagar o pedido #${codigoParaExibir(encomenda.id)} de ${encomenda.nome}?`}
+                      onConfirmar={() => apagar(encomenda)}
+                    />
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }
 

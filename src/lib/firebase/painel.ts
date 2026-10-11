@@ -11,6 +11,7 @@ import {
 import {
   Timestamp,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -138,4 +139,30 @@ export async function mudarStatusEncomenda(id: string, status: StatusEncomenda) 
     status,
     updatedAt: serverTimestamp(),
   });
+}
+
+/** Apaga um pedido de vez. As fotos de referência continuam no Cloudinary. */
+export async function apagarEncomenda(id: string) {
+  await deleteDoc(doc(getFirestore(app()), "encomendas", id));
+}
+
+/** Apaga uma criação de vez. As fotos continuam no Cloudinary. */
+export async function apagarCriacao(slug: string) {
+  await deleteDoc(doc(getFirestore(app()), COLECAO_CRIACOES, slug));
+}
+
+/**
+ * Pede ao servidor para descartar o cache das criações, para o site mostrar
+ * a alteração na próxima visita. Se falhar, o cache expira sozinho em
+ * alguns minutos; por isso o erro é só registrado.
+ */
+export async function avisarSiteAtualizado() {
+  try {
+    await fetch("/api/revalidar", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${await obterTokenDeId()}` },
+    });
+  } catch (erro) {
+    console.warn("[admin] Não foi possível atualizar o cache do site:", erro);
+  }
 }
