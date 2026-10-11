@@ -69,8 +69,8 @@ service cloud.firestore {
         && d.updatedAt == request.time;
     }
 
-    // Registros do Laboratório: o id do documento é o slug. Única fonte de
-    // vídeos do site; a página de uma criação mostra os registros associados.
+    // Registros do Laboratório: o id do documento é o slug. Guardam os vídeos
+    // de processo; a página de uma criação mostra os registros associados.
     match /laboratorio/{slug} {
       allow read: if isAdmin() || resource.data.status == 'publicado';
       allow create: if isAdmin()
