@@ -60,3 +60,51 @@ export async function enviarDoServidor(
   }
   return { src: dados.secure_url, width: dados.width, height: dados.height };
 }
+
+/** Só fotos do site podem ser apagadas por aqui. */
+const PREFIXO_PERMITIDO = "engenhices/";
+
+/**
+ * Extrai o public_id de um endereço de entrega do Cloudinary:
+ * .../image/upload/v1791692858/engenhices/criacoes/abc.png → engenhices/criacoes/abc
+ * Devolve null para endereços de outra conta ou fora da pasta do site.
+ */
+export function publicIdDaUrl(url: string, cloudName: string): string | null {
+  const prefixo = `https://res.cloudinary.com/${cloudName}/image/upload/`;
+  if (!url.startsWith(prefixo)) return null;
+  const caminho = url
+    .slice(prefixo.length)
+    .replace(/^v\d+\//, "")
+    .replace(/\.[a-z0-9]+$/i, "");
+  return caminho.startsWith(PREFIXO_PERMITIDO) ? decodeURIComponent(caminho) : null;
+}
+
+/**
+ * Apaga fotos do Cloudinary (Admin API, até 100 por chamada) e limpa o cache
+ * da CDN. Foto já inexistente conta como apagada.
+ */
+export async function apagarDoServidor(publicIds: string[], credenciais: CredenciaisCloudinary) {
+  if (publicIds.length === 0) return;
+  const parametros = new URLSearchParams({ invalidate: "true" });
+  for (const id of publicIds) parametros.append("public_ids[]", id);
+
+  const resposta = await fetch(
+    `https://api.cloudinary.com/v1_1/${credenciais.cloudName}/resources/image/upload?${parametros}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${credenciais.apiKey}:${credenciais.apiSecret}`).toString("base64")}`,
+      },
+    },
+  );
+  const dados = (await resposta.json()) as {
+    deleted?: Record<string, string>;
+    error?: { message?: string };
+  };
+  if (!resposta.ok) throw new Error(dados.error?.message ?? "Falha ao apagar no Cloudinary.");
+
+  const falhas = Object.entries(dados.deleted ?? {}).filter(
+    ([, situacao]) => situacao !== "deleted" && situacao !== "not_found",
+  );
+  if (falhas.length > 0) throw new Error(`Não apagou: ${falhas.map(([id]) => id).join(", ")}`);
+}

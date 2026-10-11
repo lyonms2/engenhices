@@ -88,7 +88,7 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
 
   async function apagar(encomenda: Encomenda) {
     if (estado.tipo !== "pronto") return;
-    await apagarEncomenda(encomenda.id);
+    await apagarEncomenda(encomenda);
     const restantes = estado.encomendas.filter((item) => item.id !== encomenda.id);
     setEstado({ tipo: "pronto", encomendas: restantes });
     onContagem?.(restantes.filter((item) => item.status === "nova").length);

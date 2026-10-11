@@ -24,8 +24,8 @@ export function ConfirmarAcao({ rotulo, pergunta, onConfirmar }: ConfirmarAcaoPr
     setErro(null);
     try {
       await onConfirmar();
-    } catch {
-      setErro("Não foi possível concluir. Tente de novo.");
+    } catch (falha) {
+      setErro(`${falha instanceof Error ? falha.message : "Não foi possível concluir."} Tente de novo.`);
       setExecutando(false);
     }
   }

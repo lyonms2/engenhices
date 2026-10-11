@@ -141,14 +141,40 @@ export async function mudarStatusEncomenda(id: string, status: StatusEncomenda) 
   });
 }
 
-/** Apaga um pedido de vez. As fotos de referência continuam no Cloudinary. */
-export async function apagarEncomenda(id: string) {
-  await deleteDoc(doc(getFirestore(app()), "encomendas", id));
+/**
+ * Apaga fotos do Cloudinary pelo servidor (que confere o login do admin).
+ * Lança erro se o Cloudinary não confirmar, para quem chamou não seguir
+ * adiante e deixar fotos abandonadas.
+ */
+export async function apagarFotos(urls: string[]) {
+  if (urls.length === 0) return;
+  const resposta = await fetch("/api/fotos/apagar", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${await obterTokenDeId()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ urls }),
+  });
+  if (!resposta.ok) {
+    const { erro } = (await resposta.json().catch(() => ({}))) as { erro?: string };
+    throw new Error(erro ?? "Não foi possível apagar as fotos.");
+  }
 }
 
-/** Apaga uma criação de vez. As fotos continuam no Cloudinary. */
-export async function apagarCriacao(slug: string) {
-  await deleteDoc(doc(getFirestore(app()), COLECAO_CRIACOES, slug));
+/**
+ * Apaga um pedido e as fotos de referência. As fotos vão primeiro: se algo
+ * falhar no meio, o pedido continua no painel e basta tentar de novo.
+ */
+export async function apagarEncomenda(encomenda: Pick<Encomenda, "id" | "fotos">) {
+  await apagarFotos(encomenda.fotos.map((foto) => foto.src));
+  await deleteDoc(doc(getFirestore(app()), "encomendas", encomenda.id));
+}
+
+/** Apaga uma criação e as fotos dela, na mesma ordem segura. */
+export async function apagarCriacao(criacao: Pick<Criacao, "slug" | "images">) {
+  await apagarFotos(criacao.images.map((imagem) => imagem.src));
+  await deleteDoc(doc(getFirestore(app()), COLECAO_CRIACOES, criacao.slug));
 }
 
 /**

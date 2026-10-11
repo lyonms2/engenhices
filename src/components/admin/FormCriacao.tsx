@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   SlugEmUsoError,
   apagarCriacao,
+  apagarFotos,
   avisarSiteAtualizado,
   codigoDoErro,
   salvarCriacao,
@@ -51,6 +52,22 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
   const [tiktokUrl, setTiktokUrl] = useState(criacao?.tiktokUrl ?? "");
   const [mercadoLivreUrl, setMercadoLivreUrl] = useState(criacao?.mercadoLivreUrl ?? "");
   const [images, setImages] = useState<ImagemCriacao[]>(criacao?.images ?? []);
+  // Fotos enviadas ao Cloudinary nesta edição. Se a edição for cancelada, ou
+  // se forem removidas antes de salvar, são apagadas para não ficarem órfãs.
+  const enviadasNestaEdicao = useRef(new Set<string>());
+  const originais = criacao?.images.map((imagem) => imagem.src) ?? [];
+
+  function mudarFotos(novas: ImagemCriacao[]) {
+    for (const imagem of novas) {
+      if (!originais.includes(imagem.src)) enviadasNestaEdicao.current.add(imagem.src);
+    }
+    setImages(novas);
+  }
+
+  /** Fotos que existem no Cloudinary mas não estão em `mantidas`. */
+  function fotosSobrando(mantidas: string[]) {
+    return [...originais, ...enviadasNestaEdicao.current].filter((src) => !mantidas.includes(src));
+  }
   const [enviandoFotos, setEnviandoFotos] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -90,6 +107,11 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
 
   function cancelar() {
     if (alterado && !window.confirm("Descartar as alterações não salvas?")) return;
+    // Descarta só o que foi enviado agora; as fotos já salvas continuam.
+    const descartadas = [...enviadasNestaEdicao.current];
+    if (descartadas.length > 0) {
+      apagarFotos(descartadas).catch((falha) => console.warn("[admin] Fotos descartadas não apagadas:", falha));
+    }
     onCancelar();
   }
 
@@ -118,6 +140,13 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
     setSalvando(true);
     try {
       await salvarCriacao(dados, { novo, createdAt: criacao?.createdAt });
+      // Só depois de salvo: apaga as fotos removidas, que o site não usa mais.
+      const removidas = fotosSobrando(dados.images.map((imagem) => imagem.src));
+      if (removidas.length > 0) {
+        await apagarFotos(removidas).catch((falha) =>
+          console.warn("[admin] Fotos removidas não apagadas:", falha),
+        );
+      }
       await avisarSiteAtualizado();
       onSalvo();
     } catch (falha) {
@@ -228,7 +257,7 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
         </Campo>
       </fieldset>
 
-      <GerenciadorFotos imagens={images} onChange={setImages} onEnviando={setEnviandoFotos} />
+      <GerenciadorFotos imagens={images} onChange={mudarFotos} onEnviando={setEnviandoFotos} />
 
       {erro && (
         <p role="alert" className="border-l-2 border-red-700 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -267,7 +296,9 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
               rotulo="Apagar criação"
               pergunta={`Apagar "${criacao.title}"?`}
               onConfirmar={async () => {
-                await apagarCriacao(criacao.slug);
+                // Inclui fotos enviadas nesta edição e ainda não salvas.
+                await apagarFotos([...enviadasNestaEdicao.current]);
+                await apagarCriacao(criacao);
                 await avisarSiteAtualizado();
                 onApagado();
               }}
