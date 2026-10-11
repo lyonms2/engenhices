@@ -24,6 +24,15 @@ type Estado =
 /** Edição em andamento: null = lista; "nova" = formulário vazio. */
 type Edicao = null | "nova" | Criacao;
 
+const ERROS_DE_LOGIN: Record<string, string> = {
+  "auth/operation-not-allowed":
+    "O login com Google não está ativado (Firebase → Authentication → Sign-in method).",
+  "auth/unauthorized-domain":
+    "Este domínio não está autorizado (Firebase → Authentication → Settings → Authorized domains).",
+  "auth/popup-blocked": "O navegador bloqueou a janela de login. Permita pop-ups para este site.",
+  "auth/network-request-failed": "Sem conexão com o Firebase. Verifique a internet.",
+};
+
 const botaoPrimario =
   "inline-flex min-h-11 items-center justify-center bg-laranja px-5 text-sm font-bold text-grafite hover:bg-[#ff7f22]";
 const botaoSecundario =
@@ -74,9 +83,10 @@ function Painel() {
       await entrarComGoogle();
     } catch (erro) {
       const codigo = codigoDoErro(erro);
-      if (codigo !== "auth/popup-closed-by-user" && codigo !== "auth/cancelled-popup-request") {
-        setErroLogin("Não foi possível entrar. Tente de novo.");
-      }
+      if (codigo === "auth/popup-closed-by-user" || codigo === "auth/cancelled-popup-request") return;
+      setErroLogin(
+        ERROS_DE_LOGIN[codigo ?? ""] ?? `Não foi possível entrar (${codigo ?? "erro desconhecido"}).`,
+      );
     }
   }
 
