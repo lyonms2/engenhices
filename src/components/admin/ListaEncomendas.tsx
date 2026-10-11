@@ -37,6 +37,8 @@ type Estado =
 /** Concluídas e recusadas saem da frente; o resto ainda pede atenção. */
 const ENCERRADAS: StatusEncomenda[] = ["concluida", "recusada"];
 type Filtro = "abertas" | "encerradas" | "todas";
+/** Dentro de "Encerrados": todos, só concluídos ou só recusados. */
+type Subfiltro = "todas" | "concluida" | "recusada";
 
 function passaNoFiltro(encomenda: Encomenda, filtro: Filtro): boolean {
   if (filtro === "todas") return true;
@@ -48,6 +50,7 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
   const [aberta, setAberta] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("abertas");
+  const [subfiltro, setSubfiltro] = useState<Subfiltro>("todas");
 
   useEffect(() => {
     let ativo = true;
@@ -106,9 +109,18 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
     );
   }
 
-  const visiveis = estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, filtro));
+  const encerradas = estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, "encerradas"));
+  const visiveis = estado.encomendas.filter(
+    (encomenda) =>
+      passaNoFiltro(encomenda, filtro) &&
+      (filtro !== "encerradas" || subfiltro === "todas" || encomenda.status === subfiltro),
+  );
   const contagem = (opcao: Filtro) =>
     estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, opcao)).length;
+  const contagemEncerradas = (opcao: Subfiltro) =>
+    opcao === "todas"
+      ? encerradas.length
+      : encerradas.filter((encomenda) => encomenda.status === opcao).length;
 
   return (
     <>
@@ -124,7 +136,10 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
             key={valor}
             type="button"
             aria-pressed={filtro === valor}
-            onClick={() => setFiltro(valor)}
+            onClick={() => {
+              setFiltro(valor);
+              setSubfiltro("todas");
+            }}
             className={cn(
               "inline-flex min-h-10 items-center gap-2 border px-4 text-sm font-bold",
               filtro === valor
@@ -138,9 +153,49 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
         ))}
       </div>
 
+      {filtro === "encerradas" && (
+        <div
+          role="group"
+          aria-label="Filtrar pedidos encerrados"
+          className="-mt-2 mb-5 flex flex-wrap items-center gap-2 border-l-2 border-grafite/15 pl-3"
+        >
+          {(
+            [
+              ["todas", "Todos"],
+              ["concluida", "Concluídos"],
+              ["recusada", "Recusados"],
+            ] as const
+          ).map(([valor, nome]) => (
+            <button
+              key={valor}
+              type="button"
+              aria-pressed={subfiltro === valor}
+              onClick={() => setSubfiltro(valor)}
+              className={cn(
+                "inline-flex min-h-9 items-center gap-2 border px-3 text-sm font-bold",
+                subfiltro === valor
+                  ? "border-grafite text-grafite"
+                  : "border-transparent text-cinza hover:text-grafite",
+              )}
+            >
+              {nome}
+              <span className="font-mono text-xs font-medium opacity-70">
+                {contagemEncerradas(valor)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {visiveis.length === 0 && (
         <p className="border border-dashed border-grafite/20 px-6 py-10 text-center text-cinza">
-          {filtro === "abertas" ? "Nenhum pedido em aberto." : "Nenhum pedido aqui."}
+          {filtro === "abertas"
+            ? "Nenhum pedido em aberto."
+            : filtro === "encerradas" && subfiltro === "concluida"
+              ? "Nenhum pedido concluído."
+              : filtro === "encerradas" && subfiltro === "recusada"
+                ? "Nenhum pedido recusado."
+                : "Nenhum pedido aqui."}
         </p>
       )}
 
