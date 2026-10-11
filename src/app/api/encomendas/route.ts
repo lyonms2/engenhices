@@ -1,5 +1,6 @@
 import { CAMPOS, MAX_BYTES_FOTO, MAX_FOTOS, validarCampos } from "@/lib/encomendas/validacao";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { gerarCodigoDoPedido } from "@/lib/encomendas/codigo";
 import { gravarEncomenda } from "@/lib/firebase/servidor";
 import { credenciaisCloudinary, enviarDoServidor } from "@/lib/servidor/cloudinary";
 import { permitirEnvio } from "@/lib/servidor/limite-de-envios";
@@ -32,7 +33,9 @@ export async function POST(request: Request) {
 
   // Campo-armadilha: invisível para pessoas, preenchido por robôs.
   // Responde como sucesso para não ensinar o robô a contornar.
-  if (String(form.get("site") ?? "") !== "") return Response.json({ ok: true });
+  if (String(form.get("site") ?? "") !== "") {
+    return Response.json({ ok: true, codigo: gerarCodigoDoPedido() });
+  }
 
   const inicio = Number(form.get("inicio"));
   if (!Number.isFinite(inicio) || Date.now() - inicio < TEMPO_MINIMO_MS) {
@@ -76,11 +79,10 @@ export async function POST(request: Request) {
     const fotosEnviadas = await Promise.all(
       fotos.map((foto) => enviarDoServidor(foto, "engenhices/encomendas", credenciais!)),
     );
-    await gravarEncomenda({ ...campos, fotos: fotosEnviadas }, chave);
+    const codigo = await gravarEncomenda({ ...campos, fotos: fotosEnviadas }, chave);
+    return Response.json({ ok: true, codigo });
   } catch (falha) {
     console.error("[encomendas] Falha ao gravar:", falha);
     return erro("Não foi possível registrar o pedido agora. Tente de novo em instantes.", 502);
   }
-
-  return Response.json({ ok: true });
 }

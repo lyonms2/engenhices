@@ -35,3 +35,10 @@ export function validarCampos(campos: CamposEncomenda): ErrosEncomenda {
   }
   return erros;
 }
+
+export const TAMANHO_DO_CODIGO = 6;
+
+/** Código do pedido para exibir: pedidos antigos têm o id longo do Firestore. */
+export function codigoParaExibir(id: string): string {
+  return id.length <= TAMANHO_DO_CODIGO ? id : id.slice(0, TAMANHO_DO_CODIGO).toUpperCase();
+}

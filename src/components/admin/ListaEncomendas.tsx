@@ -2,6 +2,13 @@
 
 import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
+import {
+  analisarContato,
+  linkEmail,
+  linkWhatsApp,
+  mensagemDeResposta,
+} from "@/lib/encomendas/contato";
+import { codigoParaExibir } from "@/lib/encomendas/validacao";
 import { codigoDoErro, listarEncomendas, mudarStatusEncomenda } from "@/lib/firebase/painel";
 import { cn } from "@/lib/utils";
 import { STATUS_ENCOMENDA, type Encomenda, type StatusEncomenda } from "@/types/encomenda";
@@ -94,7 +101,12 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
                 {STATUS_ENCOMENDA[encomenda.status]}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-bold">{encomenda.nome}</span>
+                <span className="block font-bold">
+                  <span className="mr-2 font-mono text-sm font-medium text-cinza">
+                    #{codigoParaExibir(encomenda.id)}
+                  </span>
+                  {encomenda.nome}
+                </span>
                 <span className="block truncate text-sm text-cinza">{encomenda.descricao}</span>
               </span>
               <span className="font-mono text-xs text-cinza">
@@ -106,6 +118,7 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
               <div className="space-y-5 border-t border-grafite/10 px-4 py-5 text-sm">
                 <Detalhe rotulo="Contato">
                   <span className="select-all font-bold">{encomenda.contato}</span>
+                  <BotaoResponder encomenda={encomenda} />
                 </Detalhe>
                 <Detalhe rotulo="O que precisa">{encomenda.descricao}</Detalhe>
                 <Detalhe rotulo="Finalidade">{encomenda.finalidade}</Detalhe>
@@ -151,6 +164,29 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
         );
       })}
     </ul>
+  );
+}
+
+/** Abre o WhatsApp ou o e-mail do cliente com a mensagem já começada. */
+function BotaoResponder({ encomenda }: { encomenda: Encomenda }) {
+  const contato = analisarContato(encomenda.contato);
+  if (contato.tipo === "desconhecido") return null;
+
+  const codigo = codigoParaExibir(encomenda.id);
+  const mensagem = mensagemDeResposta(encomenda.nome, codigo);
+  const whatsapp = contato.tipo === "whatsapp";
+
+  return (
+    <a
+      href={whatsapp ? linkWhatsApp(contato.numero, mensagem) : linkEmail(contato.email, codigo, mensagem)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 flex min-h-11 w-fit items-center gap-2 bg-laranja px-5 text-sm font-bold text-grafite hover:bg-[#ff7f22]"
+    >
+      {whatsapp ? "Responder no WhatsApp" : "Responder por e-mail"}
+      <span aria-hidden="true">↗</span>
+      <span className="sr-only"> (abre em nova aba)</span>
+    </a>
   );
 }
 

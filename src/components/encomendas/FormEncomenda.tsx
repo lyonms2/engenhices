@@ -23,7 +23,7 @@ import type { CamposEncomenda } from "@/types/encomenda";
 type Envio =
   | { tipo: "editando" }
   | { tipo: "enviando" }
-  | { tipo: "enviado" }
+  | { tipo: "enviado"; codigo: string | null }
   | { tipo: "falhou"; mensagem: string };
 
 type FotoSelecionada = { arquivo: File; previa: string };
@@ -120,6 +120,7 @@ export function FormEncomenda() {
       const dados = (await resposta.json().catch(() => ({}))) as {
         erro?: string;
         erros?: ErrosEncomenda;
+        codigo?: string;
       };
       if (!resposta.ok) {
         if (dados.erros) setErros(dados.erros);
@@ -127,7 +128,7 @@ export function FormEncomenda() {
         resumoRef.current?.focus();
         return;
       }
-      setEnvio({ tipo: "enviado" });
+      setEnvio({ tipo: "enviado", codigo: dados.codigo ?? null });
     } catch {
       setEnvio({ tipo: "falhou", mensagem: "Sem conexão. Verifique a internet e tente de novo." });
       resumoRef.current?.focus();
@@ -139,9 +140,18 @@ export function FormEncomenda() {
       <div role="status" className="border-l-2 border-laranja bg-white px-6 py-8">
         <p className="font-mono text-xs tracking-wider text-laranja-escuro uppercase">Pedido recebido</p>
         <p className="mt-3 text-2xl font-extrabold">Obrigado! Sua ideia chegou à bancada.</p>
-        <p className="mt-3 leading-relaxed text-cinza">
-          Vamos analisar a viabilidade e responder pelo contato que você informou. Se for
-          possível fazer, enviamos o orçamento; nenhum valor é cobrado antes disso.
+        {envio.codigo && (
+          <p className="mt-5">
+            <span className="block text-sm text-cinza">Número do seu pedido</span>
+            <span className="mt-1 inline-block bg-grafite px-3 py-1.5 font-mono text-2xl font-medium tracking-[0.2em] text-branco select-all">
+              #{envio.codigo}
+            </span>
+          </p>
+        )}
+        <p className="mt-5 leading-relaxed text-cinza">
+          Vamos analisar a viabilidade e responder pelo contato que você informou
+          {envio.codigo ? ", citando este número" : ""}. Se for possível fazer, enviamos o
+          orçamento; nenhum valor é cobrado antes disso.
         </p>
       </div>
     );

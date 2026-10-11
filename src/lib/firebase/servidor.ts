@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -7,8 +6,10 @@ import {
   getFirestore,
   query,
   serverTimestamp,
+  setDoc,
   where,
 } from "firebase/firestore/lite";
+import { gerarCodigoDoPedido } from "@/lib/encomendas/codigo";
 import type { Criacao } from "@/types/criacao";
 import type { CamposEncomenda, FotoReferencia } from "@/types/encomenda";
 import { getFirebaseApp } from "./client";
@@ -58,14 +59,25 @@ export async function lerCriacoesPublicas(): Promise<Criacao[]> {
 export async function gravarEncomenda(
   dados: CamposEncomenda & { fotos: FotoReferencia[] },
   chave: string,
-): Promise<void> {
-  await addDoc(collection(db(), "encomendas"), {
-    ...dados,
-    status: "nova",
-    chave,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+): Promise<string> {
+  // O código do pedido é o id do documento. Se já existir (raríssimo), a
+  // gravação vira uma alteração, que as regras recusam; tenta outro código.
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const codigo = gerarCodigoDoPedido();
+    try {
+      await setDoc(doc(db(), "encomendas", codigo), {
+        ...dados,
+        status: "nova",
+        chave,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      return codigo;
+    } catch (erro) {
+      if ((erro as { code?: string }).code !== "permission-denied" || tentativa === 2) throw erro;
+    }
+  }
+  throw new Error("Não foi possível gerar um código de pedido.");
 }
 
 export async function lerCriacaoPublica(slug: string): Promise<Criacao | null> {
