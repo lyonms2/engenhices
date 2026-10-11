@@ -8,8 +8,8 @@
  * Nenhuma credencial de conta de serviço (Admin SDK) deve usar o prefixo
  * NEXT_PUBLIC_: esse prefixo envia o valor ao navegador.
  *
- * O SDK `firebase` ainda não está instalado; nada aqui é importado pelas
- * páginas. O site funciona sem estas variáveis.
+ * A inicialização fica em client.ts. Nenhuma página usa o Firebase ainda,
+ * e o site funciona sem estas variáveis.
  */
 
 export type FirebasePublicConfig = {

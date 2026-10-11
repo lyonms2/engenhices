@@ -1,24 +1,22 @@
-# Integração com o Firebase (próxima etapa)
+# Integração com o Firebase
 
-Nada aqui está ligado ainda. Este é o roteiro para conectar sem reestruturar o site.
+Projeto Firebase: `engenhices`. Os passos 1 a 3 estão feitos; nenhuma página lê dados do
+Firebase ainda. Este é o roteiro para concluir a integração sem reestruturar o site.
 
-## 1. Instalar o SDK
+## 1. SDK — feito
 
-```bash
-npm install firebase
-```
+O pacote `firebase` está instalado.
 
-## 2. Variáveis de ambiente
+## 2. Variáveis de ambiente — feito localmente
 
 Copie `.env.example` para `.env.local` e preencha com os valores do console
 (Configurações do projeto → Seus apps → App da Web). Na Vercel, cadastre as
 mesmas variáveis em *Settings → Environment Variables*.
 
-## 3. Inicialização
+## 3. Inicialização — feito
 
-Criar `src/lib/firebase/client.ts` usando `getFirebasePublicConfig()` de
-`config.ts`, com `getApps().length ? getApp() : initializeApp(config)` para não
-inicializar duas vezes.
+`client.ts` exporta `getFirebaseApp()`, que reaproveita a instância existente e devolve
+`null` se as variáveis não estiverem definidas.
 
 ## 4. Trocar a fonte de dados
 

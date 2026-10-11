@@ -9,12 +9,22 @@ export const siteConfig = {
   description:
     "Engenhices é uma marca maker de invenções, experimentos e produtos físicos. Criamos, construímos e testamos ideias até que ganhem forma.",
   locale: "pt_BR",
-  /**
-   * URL pública do site. Definida pela variável NEXT_PUBLIC_SITE_URL;
-   * sem ela, usa localhost (o suficiente para desenvolvimento).
-   */
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  url: resolverUrlDoSite(),
 } as const;
+
+/**
+ * URL pública do site, em ordem de preferência:
+ * 1. NEXT_PUBLIC_SITE_URL, quando definida (domínio próprio);
+ * 2. o domínio de produção que a Vercel injeta no build;
+ * 3. localhost, em desenvolvimento.
+ */
+function resolverUrlDoSite(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  return "http://localhost:3000";
+}
 
 export type NavItem = {
   label: string;
