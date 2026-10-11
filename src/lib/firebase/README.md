@@ -1,7 +1,7 @@
 # Integração com o Firebase
 
-Projeto Firebase: `engenhices`. Os passos 1 a 3 estão feitos; nenhuma página lê dados do
-Firebase ainda. Este é o roteiro para concluir a integração sem reestruturar o site.
+Projeto Firebase: `engenhices`. Passos 1 a 4 e 6 feitos; falta publicar as regras com o UID
+do administrador e, depois, o formulário de encomendas e o envio de fotos.
 
 ## 1. SDK — feito
 
@@ -18,11 +18,11 @@ mesmas variáveis em *Settings → Environment Variables*.
 `client.ts` exporta `getFirebaseApp()`, que reaproveita a instância existente e devolve
 `null` se as variáveis não estiverem definidas.
 
-## 4. Trocar a fonte de dados
+## 4. Fonte de dados — feito
 
-Só `src/lib/criacoes.ts` muda: as funções passam a consultar a coleção
-`criacoes` (filtrando `status != "rascunho"`) e a converter `Timestamp` em
-string ISO. Páginas e componentes não mudam.
+`src/lib/criacoes.ts` lê a coleção `criacoes` pelo Firestore Lite (`servidor.ts`), com
+cache de alguns minutos. O id de cada documento é o slug. Sem as variáveis de ambiente,
+usa os dados demonstrativos.
 
 ## 5. Regras de segurança
 
@@ -37,7 +37,8 @@ Publicar regras **restritivas** antes de qualquer dado real:
 
 Nunca usar regras abertas (`allow read, write: if true`), nem em teste.
 
-## 6. Área administrativa
+## 6. Área administrativa — feito
 
-A rota `/admin` só deve ser criada junto com o Firebase Authentication e a
-verificação no servidor. Até lá ela não existe (responde 404).
+`/admin` (componentes em `src/components/admin`, operações em `painel.ts`) grava direto no
+Firestore com o login Google. As regras em `/firestore.rules` só aceitam gravações do UID
+do administrador e validam cada campo.

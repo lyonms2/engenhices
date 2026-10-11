@@ -33,7 +33,9 @@ export default async function CriacoesPage() {
         {criacoes.length > 0 ? (
           <CriacoesGrid criacoes={criacoes} />
         ) : (
-          <p className="text-cinza">Nenhuma criação publicada ainda.</p>
+          <p className="border border-dashed border-grafite/20 px-6 py-12 text-center text-cinza">
+            As primeiras criações estão saindo da bancada. Em breve, aqui.
+          </p>
         )}
       </Section>
     </>

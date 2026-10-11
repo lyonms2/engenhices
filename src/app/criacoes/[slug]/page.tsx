@@ -10,9 +10,16 @@ import { getCriacaoPorSlug, getCriacoes } from "@/lib/criacoes";
 import { getYouTubeEmbedUrl } from "@/lib/utils";
 import { CATEGORIAS } from "@/types/criacao";
 
+/**
+ * Com Cache Components, a lista não pode ser vazia. Enquanto não houver
+ * criações publicadas, um slug provisório (que responde 404) mantém o build
+ * válido; as criações novas são geradas na primeira visita.
+ */
 export async function generateStaticParams() {
   const criacoes = await getCriacoes();
-  return criacoes.map((criacao) => ({ slug: criacao.slug }));
+  return criacoes.length > 0
+    ? criacoes.map((criacao) => ({ slug: criacao.slug }))
+    : [{ slug: "em-breve" }];
 }
 
 export async function generateMetadata({

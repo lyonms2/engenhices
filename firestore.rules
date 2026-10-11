@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Regras do Firestore da Engenhices.
+// Publicar no console: Firestore → Regras → colar este arquivo → Publicar.
+// (Ou, com a CLI do Firebase: firebase deploy --only firestore:rules)
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Único administrador, identificado pelo UID do Firebase Authentication
+    // (o /admin mostra o UID de quem entrou). O UID não é segredo nem dado
+    // pessoal; por isso fica aqui, num repositório público, no lugar do e-mail.
+    // Enquanto for o texto provisório abaixo, ninguém tem acesso de escrita.
+    function isAdmin() {
+      return request.auth != null && request.auth.uid == 'UID_DO_ADMIN';
+    }
+
+    function urlOuNulo(valor) {
+      return valor == null || (valor is string && valor.size() <= 500);
+    }
+
+    function criacaoValida(d, slug) {
+      return d.keys().hasOnly([
+          'title', 'slug', 'description', 'images', 'category', 'featured',
+          'status', 'youtubeUrl', 'tiktokUrl', 'mercadoLivreUrl', 'createdAt', 'updatedAt'
+        ])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 120
+        && d.slug == slug && slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && slug.size() <= 80
+        && d.description is string && d.description.size() <= 2000
+        && d.images is list && d.images.size() <= 12
+        && d.category in ['utilidades', 'organizacao', 'mecanismos', 'ferramentas', 'decoracao', 'prototipos']
+        && d.featured is bool
+        && d.status in ['rascunho', 'publicado', 'arquivado']
+        && urlOuNulo(d.youtubeUrl)
+        && urlOuNulo(d.tiktokUrl)
+        && urlOuNulo(d.mercadoLivreUrl)
+        && d.createdAt is timestamp
+        && d.updatedAt == request.time;
+    }
+
+    // Criações: o id do documento é o slug.
+    // O público lê só o que foi publicado ou arquivado; rascunhos só o admin vê.
+    match /criacoes/{slug} {
+      allow read: if isAdmin() || resource.data.status in ['publicado', 'arquivado'];
+      allow create: if isAdmin()
+        && criacaoValida(request.resource.data, slug)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin()
+        && criacaoValida(request.resource.data, slug)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
+    // Todo o resto fica fechado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -7,7 +7,6 @@ import { getCriacoesEmDestaque } from "@/lib/criacoes";
 
 export async function FeaturedCriacoes() {
   const criacoes = await getCriacoesEmDestaque();
-  if (criacoes.length === 0) return null;
 
   const temExemplos = criacoes.some((criacao) => criacao.demo);
 
@@ -28,7 +27,13 @@ export async function FeaturedCriacoes() {
       {temExemplos && <AvisoDemonstrativo className="mt-10" />}
 
       <div className="mt-8">
-        <CriacoesGrid criacoes={criacoes} />
+        {criacoes.length > 0 ? (
+          <CriacoesGrid criacoes={criacoes} />
+        ) : (
+          <p className="mt-4 border border-dashed border-grafite/20 px-6 py-12 text-center text-cinza">
+            As primeiras criações estão saindo da bancada. Em breve, aqui.
+          </p>
+        )}
       </div>
     </Section>
   );

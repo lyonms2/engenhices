@@ -63,7 +63,9 @@ src/
 
 ### Conteúdo demonstrativo
 
-As criações em `src/data/criacoes-demo.ts` são **exemplos** (`demo: true`), não produtos reais.
+Com o Firebase configurado, as criações vêm da coleção `criacoes` do Firestore. Sem ele
+(desenvolvimento sem `.env.local`), o site usa os **exemplos** de `src/data/criacoes-demo.ts`
+(`demo: true`), que não são produtos reais.
 O site mostra o selo "Exemplo" nelas, não as inclui no sitemap e marca suas páginas com
 `noindex`. Não há links de vídeos, redes sociais ou anúncios inventados: onde ainda não existe
 um endereço real, o site mostra "em breve".
@@ -80,9 +82,14 @@ Variáveis de ambiente previstas: veja [`.env.example`](.env.example). Copie par
 
 ## Área administrativa
 
-A rota `/admin` **não existe** nesta etapa (responde 404) e está bloqueada no `robots.txt`.
-Ela será criada junto com o Firebase Authentication e a verificação de permissão no servidor,
-para não haver uma tela que aparente segurança sem ter autenticação real.
+`/admin` usa login Google (Firebase Authentication) para criar, editar, publicar e arquivar
+criações. A segurança está nas regras do Firestore ([`firestore.rules`](firestore.rules)):
+o público lê só criações publicadas ou arquivadas, e só o UID do administrador lê rascunhos
+e grava. A página fica fora dos buscadores (`noindex` e `robots.txt`).
+
+Para liberar o administrador: entre em `/admin`, copie o UID exibido, troque `UID_DO_ADMIN`
+em `firestore.rules` e publique as regras (console do Firebase → Firestore → Regras).
+Alterações feitas no painel aparecem no site em até alguns minutos (cache de 1 min).
 
 ## Implantação na Vercel
 
