@@ -8,6 +8,8 @@ export type VideoDoSite = {
   url: string;
   /** Registro do Laboratório de onde o vídeo vem, se houver. */
   registro?: { titulo: string; href: string };
+  /** Vídeo de apresentação da criação (vende o produto). */
+  apresentacao?: boolean;
 };
 
 /** Junta os vídeos de um conteúdo, sem repetir o mesmo vídeo. */
@@ -21,7 +23,7 @@ export function videosSemRepeticao(videos: VideoDoSite[]): VideoDoSite[] {
   });
 }
 
-/** Vídeos de um registro (ou dos campos antigos de uma criação). */
+/** Vídeos de um registro do Laboratório. */
 export function videosDe(
   fonte: { youtubeUrl: string | null; tiktokUrl: string | null },
   registro?: VideoDoSite["registro"],
@@ -30,6 +32,14 @@ export function videosDe(
   if (fonte.youtubeUrl) videos.push({ plataforma: "YouTube", url: fonte.youtubeUrl, registro });
   if (fonte.tiktokUrl) videos.push({ plataforma: "TikTok", url: fonte.tiktokUrl, registro });
   return videos;
+}
+
+/** O vídeo de apresentação de uma criação, se houver. */
+export function videoDeApresentacao(criacao: {
+  youtubeUrl: string | null;
+  tiktokUrl: string | null;
+}): VideoDoSite[] {
+  return videosDe(criacao).map((video) => ({ ...video, apresentacao: true }));
 }
 
 /**
@@ -66,7 +76,7 @@ export function SecaoVideos({
                 className={cn("w-full", incorporado?.vertical ? "sm:w-[320px]" : "lg:w-[640px]")}
               >
                 <p className="mb-3 font-mono text-xs tracking-wider text-laranja uppercase">
-                  {video.plataforma}
+                  {video.apresentacao ? `Apresentação · ${video.plataforma}` : video.plataforma}
                 </p>
                 {incorporado ? (
                   <iframe

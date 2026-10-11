@@ -187,21 +187,9 @@ function Painel() {
     void carregar(estado.usuario);
   };
 
-  function abrirNovoRegistro(criacao: Criacao, moverVideosAntigos: boolean) {
+  function abrirNovoRegistro(criacao: Criacao) {
     setAba("laboratorio");
-    setEdicao({
-      tipo: "registro",
-      rascunho: moverVideosAntigos
-        ? {
-            title: `${criacao.title} em uso`,
-            type: "resultado",
-            creationSlug: criacao.slug,
-            youtubeUrl: criacao.youtubeUrl,
-            tiktokUrl: criacao.tiktokUrl,
-            migrarVideosDe: criacao.slug,
-          }
-        : { creationSlug: criacao.slug },
-    });
+    setEdicao({ tipo: "registro", rascunho: { creationSlug: criacao.slug } });
   }
 
   const editor =

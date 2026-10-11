@@ -89,3 +89,18 @@ export function miniaturaDoYouTube(url: string): string | null {
   const id = analisarYouTube(url)?.embedUrl.split("/").pop();
   return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
 }
+
+/**
+ * Plataforma de um link de vídeo, pelo domínio. Aceita links curtos
+ * (youtu.be, vm.tiktok.com), que nem sempre viram player, mas viram link.
+ */
+export function plataformaDoLink(url: string): "YouTube" | "TikTok" | null {
+  try {
+    const host = new URL(url).hostname.replace(/^www\.|^m\./, "");
+    if (host === "youtube.com" || host === "youtu.be") return "YouTube";
+    if (host === "tiktok.com" || host.endsWith(".tiktok.com")) return "TikTok";
+    return null;
+  } catch {
+    return null;
+  }
+}

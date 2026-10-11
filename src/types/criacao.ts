@@ -39,6 +39,10 @@ export type Criacao = {
   category: Categoria;
   featured: boolean;
   status: StatusCriacao;
+  /**
+   * Vídeo de apresentação do produto (um só: YouTube OU TikTok). Vídeos de
+   * processo ficam nos registros do Laboratório associados à criação.
+   */
   youtubeUrl: string | null;
   tiktokUrl: string | null;
   /** Anúncio oficial no Mercado Livre, onde a compra é concluída. */

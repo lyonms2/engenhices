@@ -7,7 +7,12 @@ import { RegistroCard } from "@/components/laboratorio/RegistroCard";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Section";
-import { SecaoVideos, videosDe, videosSemRepeticao } from "@/components/videos/SecaoVideos";
+import {
+  SecaoVideos,
+  videoDeApresentacao,
+  videosDe,
+  videosSemRepeticao,
+} from "@/components/videos/SecaoVideos";
 import { getCriacaoPorSlug, getCriacoes } from "@/lib/criacoes";
 import { getRegistrosDaCriacao } from "@/lib/laboratorio";
 import { CATEGORIAS } from "@/types/criacao";
@@ -62,15 +67,15 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
   const criacao = await getCriacaoPorSlug(slug);
   if (!criacao) notFound();
 
-  // Os vídeos vêm dos registros do Laboratório associados a esta criação.
-  // Os campos antigos de vídeo da criação ainda entram (sem repetir) até
-  // serem movidos para um registro pelo painel.
+  // Primeiro o vídeo de apresentação (vende o produto), depois os vídeos de
+  // processo dos registros do Laboratório associados. O mesmo link nunca
+  // aparece duas vezes.
   const registros = await getRegistrosDaCriacao(criacao.slug);
   const videos = videosSemRepeticao([
+    ...videoDeApresentacao(criacao),
     ...registros.flatMap((registro) =>
       videosDe(registro, { titulo: registro.title, href: `/laboratorio/${registro.slug}` }),
     ),
-    ...videosDe(criacao),
   ]);
 
   return (

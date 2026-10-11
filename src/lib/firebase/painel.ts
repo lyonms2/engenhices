@@ -279,15 +279,3 @@ export async function apagarRegistro(registro: Pick<RegistroLab, "slug" | "image
   await apagarFotos(registro.images.map((imagem) => imagem.src));
   await deleteDoc(doc(getFirestore(app()), COLECAO_LABORATORIO, registro.slug));
 }
-
-/**
- * Esvazia os campos antigos de vídeo de uma criação, depois que os vídeos
- * foram movidos para um registro do Laboratório.
- */
-export async function limparVideosDaCriacao(slug: string) {
-  await updateDoc(doc(getFirestore(app()), COLECAO_CRIACOES, slug), {
-    youtubeUrl: null,
-    tiktokUrl: null,
-    updatedAt: serverTimestamp(),
-  });
-}

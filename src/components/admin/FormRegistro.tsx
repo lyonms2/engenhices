@@ -7,7 +7,6 @@ import {
   apagarRegistro,
   avisarSiteAtualizado,
   codigoDoErro,
-  limparVideosDaCriacao,
   salvarRegistro,
   type DadosRegistro,
 } from "@/lib/firebase/painel";
@@ -24,13 +23,10 @@ import { Campo, campo } from "./CampoDoFormulario";
 import { ConfirmarAcao } from "./ConfirmarAcao";
 import { GerenciadorFotos } from "./GerenciadorFotos";
 
-/** Valores iniciais de um registro novo (ex.: vídeos movidos de uma criação). */
+/** Valores iniciais de um registro novo (ex.: aberto a partir de uma criação). */
 export type RascunhoDeRegistro = Partial<
   Pick<RegistroLab, "title" | "type" | "summary" | "youtubeUrl" | "tiktokUrl" | "creationSlug">
-> & {
-  /** Slug da criação cujos campos antigos de vídeo serão esvaziados ao salvar. */
-  migrarVideosDe?: string;
-};
+>;
 
 type FormRegistroProps = {
   /** Registro em edição; ausente ao criar um novo. */
@@ -57,9 +53,7 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
     youtubeUrl: registro?.youtubeUrl ?? rascunho?.youtubeUrl ?? "",
     tiktokUrl: registro?.tiktokUrl ?? rascunho?.tiktokUrl ?? "",
     creationSlug: registro?.creationSlug ?? rascunho?.creationSlug ?? "",
-    // Vídeos movidos de uma criação já estavam no ar: o registro nasce publicado
-    // para eles não sumirem da página do produto.
-    status: registro?.status ?? ((rascunho?.migrarVideosDe ? "publicado" : "rascunho") as StatusDoRegistro),
+    status: registro?.status ?? ("rascunho" as StatusDoRegistro),
     images: registro?.images ?? ([] as ImagemCriacao[]),
   };
 
@@ -95,7 +89,7 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
   const [retratoInicial] = useState(() => JSON.stringify(inicial));
   const alterado =
     JSON.stringify({ title, type, summary, body, youtubeUrl, tiktokUrl, creationSlug, status, images }) !==
-      retratoInicial || Boolean(rascunho && novo);
+      retratoInicial;
 
   useEffect(() => {
     if (!alterado || salvando) return;
@@ -137,13 +131,6 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
     setSalvando(true);
     try {
       await salvarRegistro(dados, { novo, createdAt: registro?.createdAt });
-      // Não fatal: se falhar, o site não repete o vídeo (os dois caminhos são unificados).
-      if (rascunho?.migrarVideosDe) {
-        await limparVideosDaCriacao(rascunho.migrarVideosDe).catch((falha) =>
-          console.warn("[admin] Vídeos antigos da criação não foram esvaziados:", falha),
-        );
-      }
-
       const mantidas = dados.images.map((imagem) => imagem.src);
       const removidas = [...originais, ...enviadasNestaEdicao.current].filter((src) => !mantidas.includes(src));
       if (removidas.length > 0) {
@@ -166,14 +153,6 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
   return (
     <form onSubmit={enviar} className="space-y-6">
       <h2 className="text-2xl font-extrabold">{novo ? "Novo registro do Laboratório" : `Editar: ${registro.title}`}</h2>
-
-      {rascunho?.migrarVideosDe && (
-        <p className="border-l-2 border-laranja bg-white px-4 py-3 text-sm">
-          Os vídeos de <strong>{criacaoEscolhida?.title ?? rascunho.migrarVideosDe}</strong> vieram para este
-          registro. Ao salvar, eles saem do cadastro da criação e passam a ser exibidos a partir daqui, na
-          página dela e no Laboratório.
-        </p>
-      )}
 
       <Campo rotulo="Título" contador={{ atual: title.length, maximo: 120 }}>
         <input required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} className={campo} />
@@ -274,7 +253,6 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
         <p role="status" className="border-l-2 border-laranja bg-white px-4 py-3 text-sm">
           <strong>Atenção:</strong> em rascunho, os vídeos deste registro não aparecem na página de{" "}
           <strong>{criacaoEscolhida?.title ?? creationSlug}</strong> nem no Laboratório.
-          {rascunho?.migrarVideosDe && " Eles estavam no ar; publique para que continuem aparecendo."}
         </p>
       )}
 

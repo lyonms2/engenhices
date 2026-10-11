@@ -10,7 +10,7 @@ import {
   salvarCriacao,
   type DadosCriacao,
 } from "@/lib/firebase/painel";
-import { gerarSlug } from "@/lib/utils";
+import { analisarTikTok, analisarYouTube, gerarSlug, plataformaDoLink } from "@/lib/utils";
 import { Campo, campo } from "./CampoDoFormulario";
 import { ConfirmarAcao } from "./ConfirmarAcao";
 import { GerenciadorFotos } from "./GerenciadorFotos";
@@ -32,8 +32,8 @@ type FormCriacaoProps = {
   onApagado: () => void;
   /** Registros do Laboratório associados a esta criação. */
   registros: RegistroLab[];
-  /** Abre um registro novo já associado (e, se houver, com os vídeos antigos). */
-  onNovoRegistro: (criacao: Criacao, moverVideosAntigos: boolean) => void;
+  /** Abre um registro novo do Laboratório já associado a esta criação. */
+  onNovoRegistro: (criacao: Criacao) => void;
   onEditarRegistro: (registro: RegistroLab) => void;
 };
 
@@ -61,10 +61,9 @@ export function FormCriacao({
   const [category, setCategory] = useState<Categoria>(criacao?.category ?? "utilidades");
   const [status, setStatus] = useState<StatusCriacao>(criacao?.status ?? "rascunho");
   const [featured, setFeatured] = useState(criacao?.featured ?? false);
-  // Campos antigos de vídeo: não são mais editados aqui. Passam intactos ao
-  // salvar, até serem movidos para um registro do Laboratório.
-  const youtubeUrl = criacao?.youtubeUrl ?? "";
-  const tiktokUrl = criacao?.tiktokUrl ?? "";
+  // Vídeo de apresentação: um campo só; ao salvar, vai para youtubeUrl ou
+  // tiktokUrl conforme o domínio do link.
+  const [video, setVideo] = useState(criacao?.youtubeUrl ?? criacao?.tiktokUrl ?? "");
   const [mercadoLivreUrl, setMercadoLivreUrl] = useState(criacao?.mercadoLivreUrl ?? "");
   const [images, setImages] = useState<ImagemCriacao[]>(criacao?.images ?? []);
   // Fotos enviadas ao Cloudinary nesta edição. Se a edição for cancelada, ou
@@ -89,10 +88,18 @@ export function FormCriacao({
 
   const slugFinal = novo && !slugEditado ? gerarSlug(title) : slug;
 
+  const videoLimpo = video.trim() || null;
+  const plataformaDoVideo = videoLimpo ? plataformaDoLink(videoLimpo) : null;
+  // Link reconhecido mas sem player (ex.: vm.tiktok.com): vira botão no site.
+  const videoSemPlayer =
+    videoLimpo !== null &&
+    plataformaDoVideo !== null &&
+    !(plataformaDoVideo === "YouTube" ? analisarYouTube(videoLimpo) : analisarTikTok(videoLimpo));
+
   // Retrato do formulário, para saber se há alterações não salvas.
   const retrato = (valores: {
     title: string; description: string; category: Categoria; status: StatusCriacao;
-    featured: boolean; youtubeUrl: string; tiktokUrl: string; mercadoLivreUrl: string;
+    featured: boolean; video: string; mercadoLivreUrl: string;
     images: ImagemCriacao[];
   }) => JSON.stringify(valores);
   const [retratoInicial] = useState(() =>
@@ -102,14 +109,13 @@ export function FormCriacao({
       category: criacao?.category ?? "utilidades",
       status: criacao?.status ?? "rascunho",
       featured: criacao?.featured ?? false,
-      youtubeUrl: criacao?.youtubeUrl ?? "",
-      tiktokUrl: criacao?.tiktokUrl ?? "",
+      video: criacao?.youtubeUrl ?? criacao?.tiktokUrl ?? "",
       mercadoLivreUrl: criacao?.mercadoLivreUrl ?? "",
       images: criacao?.images ?? [],
     }),
   );
   const alterado =
-    retrato({ title, description, category, status, featured, youtubeUrl, tiktokUrl, mercadoLivreUrl, images }) !==
+    retrato({ title, description, category, status, featured, video, mercadoLivreUrl, images }) !==
     retratoInicial;
 
   // Avisa antes de fechar ou recarregar a aba com alterações não salvas.
@@ -141,6 +147,10 @@ export function FormCriacao({
       setErro("Defina um título para gerar o endereço da página.");
       return;
     }
+    if (videoLimpo && !plataformaDoVideo) {
+      setErro("O vídeo de apresentação precisa ser um link do YouTube ou do TikTok.");
+      return;
+    }
 
     const dados: DadosCriacao = {
       title: title.trim(),
@@ -150,8 +160,8 @@ export function FormCriacao({
       category,
       featured,
       status,
-      youtubeUrl: youtubeUrl.trim() || null,
-      tiktokUrl: tiktokUrl.trim() || null,
+      youtubeUrl: plataformaDoVideo === "YouTube" ? videoLimpo : null,
+      tiktokUrl: plataformaDoVideo === "TikTok" ? videoLimpo : null,
       mercadoLivreUrl: mercadoLivreUrl.trim() || null,
     };
 
@@ -263,36 +273,40 @@ export function FormCriacao({
       </label>
 
       <fieldset className="space-y-6 border-t border-grafite/10 pt-6">
-        <legend className="font-mono text-xs tracking-wider text-cinza uppercase">Venda (opcional)</legend>
+        <legend className="font-mono text-xs tracking-wider text-cinza uppercase">Venda e apresentação (opcionais)</legend>
         <Campo rotulo="Anúncio no Mercado Livre">
           <input type="url" maxLength={500} value={mercadoLivreUrl} onChange={(e) => setMercadoLivreUrl(e.target.value)} placeholder="https://" className={campo} />
         </Campo>
+        <Campo
+          rotulo="Vídeo de apresentação"
+          ajuda="Um vídeo curto do produto em uso, do YouTube ou do TikTok. Aparece só na página do produto, antes dos vídeos do Laboratório."
+        >
+          <input
+            type="url"
+            maxLength={500}
+            value={video}
+            onChange={(e) => setVideo(e.target.value)}
+            placeholder="https://www.youtube.com/shorts/… ou https://www.tiktok.com/@…/video/…"
+            className={campo}
+          />
+        </Campo>
+        {videoLimpo && !plataformaDoVideo && (
+          <p className="-mt-3 text-sm font-bold text-red-800">Use um link do YouTube ou do TikTok.</p>
+        )}
+        {videoSemPlayer && (
+          <p className="-mt-3 text-sm text-cinza">
+            Este link vai aparecer como botão &ldquo;Assistir no {plataformaDoVideo}&rdquo;. Para o vídeo tocar
+            na página, use o link completo do vídeo (para o TikTok: tiktok.com/@perfil/video/…).
+          </p>
+        )}
       </fieldset>
 
       <fieldset className="space-y-4 border-t border-grafite/10 pt-6">
-        <legend className="font-mono text-xs tracking-wider text-cinza uppercase">Laboratório e vídeos</legend>
+        <legend className="font-mono text-xs tracking-wider text-cinza uppercase">Laboratório</legend>
         <p className="text-sm text-cinza">
-          Vídeos, testes e bastidores desta criação são registros do Laboratório. Cada registro
-          associado aparece no Laboratório e aqui, na página da criação, sem cadastro duplicado.
+          Testes, erros, melhorias e bastidores desta criação são registros do Laboratório. Cada
+          registro associado aparece no Laboratório e aqui, na página da criação, com os vídeos dele.
         </p>
-
-        {criacao && (youtubeUrl || tiktokUrl) && (
-          <div className="border-l-2 border-laranja bg-white px-4 py-3 text-sm">
-            <p className="font-bold">Vídeos no formato antigo</p>
-            <p className="mt-1 text-cinza">
-              Esta criação tem vídeos cadastrados direto nela ({[youtubeUrl && "YouTube", tiktokUrl && "TikTok"].filter(Boolean).join(" e ")}).
-              Eles continuam aparecendo no site. Mova-os para um registro do Laboratório para
-              contar a história deles.
-            </p>
-            <button
-              type="button"
-              onClick={() => sair(() => onNovoRegistro(criacao, true))}
-              className="mt-3 inline-flex min-h-10 items-center bg-laranja px-4 text-sm font-bold text-grafite hover:bg-[#ff7f22]"
-            >
-              Mover para o Laboratório
-            </button>
-          </div>
-        )}
 
         {registros.length > 0 && (
           <ul className="divide-y divide-grafite/10 border-y border-grafite/10">
@@ -321,7 +335,7 @@ export function FormCriacao({
         {criacao ? (
           <button
             type="button"
-            onClick={() => sair(() => onNovoRegistro(criacao, false))}
+            onClick={() => sair(() => onNovoRegistro(criacao))}
             className="inline-flex min-h-10 items-center border border-grafite/25 px-4 text-sm font-bold hover:border-grafite"
           >
             Novo registro para esta criação

@@ -2,8 +2,9 @@ import type { ImagemCriacao } from "./criacao";
 
 /**
  * Registro do Engenhices Lab: a unidade editorial que documenta como uma
- * ideia vira produto (ou ainda não virou). É a ÚNICA fonte de vídeos do site:
- * a página de uma criação mostra os vídeos dos registros associados a ela.
+ * ideia vira produto (ou ainda não virou). Guarda os vídeos de PROCESSO
+ * (testes, erros, bastidores); a página de uma criação mostra esses vídeos
+ * junto com o vídeo de apresentação dela.
  * Espelha o documento da coleção `laboratorio` do Firestore (id = slug).
  */
 
