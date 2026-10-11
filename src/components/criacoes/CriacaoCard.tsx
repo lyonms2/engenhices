@@ -46,7 +46,7 @@ export function CriacaoCard({ criacao, tituloComo: Titulo = "h3" }: CriacaoCardP
             {criacao.title}
           </Link>
         </Titulo>
-        <p className="mt-3 flex-1 text-sm leading-relaxed text-cinza">{criacao.description}</p>
+        <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-cinza">{criacao.description}</p>
         <p
           aria-hidden="true"
           className="mt-6 flex items-center gap-2 text-sm font-bold text-grafite transition-colors group-hover:text-laranja-escuro"

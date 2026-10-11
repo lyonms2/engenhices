@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DescricaoExpansivel } from "@/components/criacoes/DescricaoExpansivel";
+import { Galeria } from "@/components/criacoes/Galeria";
+import { VideosCriacao } from "@/components/criacoes/VideosCriacao";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Section";
-import { Placeholder } from "@/components/ui/Placeholder";
 import { getCriacaoPorSlug, getCriacoes } from "@/lib/criacoes";
-import { getYouTubeEmbedUrl } from "@/lib/utils";
 import { CATEGORIAS } from "@/types/criacao";
 
 /**
@@ -22,6 +22,13 @@ export async function generateStaticParams() {
     : [{ slug: "em-breve" }];
 }
 
+/** Resumo para buscadores e redes: a descrição corrida, cortada numa palavra. */
+function resumir(texto: string, limite = 160): string {
+  const corrido = texto.replace(/\s+/g, " ").trim();
+  if (corrido.length <= limite) return corrido;
+  return `${corrido.slice(0, corrido.lastIndexOf(" ", limite - 1))}…`;
+}
+
 export async function generateMetadata({
   params,
 }: PageProps<"/criacoes/[slug]">): Promise<Metadata> {
@@ -29,10 +36,20 @@ export async function generateMetadata({
   const criacao = await getCriacaoPorSlug(slug);
   if (!criacao) return { title: "Criação não encontrada" };
 
+  const capa = criacao.images[0];
+  const description = resumir(criacao.description);
+
   return {
     title: criacao.title,
-    description: criacao.description,
+    description,
     alternates: { canonical: `/criacoes/${criacao.slug}` },
+    openGraph: capa
+      ? {
+          title: criacao.title,
+          description,
+          images: [{ url: capa.src, width: capa.width, height: capa.height, alt: capa.alt }],
+        }
+      : undefined,
     // Páginas de exemplo não devem ser indexadas como produtos reais.
     robots: criacao.demo ? { index: false, follow: true } : undefined,
   };
@@ -42,9 +59,6 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
   const { slug } = await params;
   const criacao = await getCriacaoPorSlug(slug);
   if (!criacao) notFound();
-
-  const [capa, ...galeria] = criacao.images;
-  const videoEmbed = criacao.youtubeUrl ? getYouTubeEmbedUrl(criacao.youtubeUrl) : null;
 
   return (
     <article>
@@ -66,38 +80,9 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
         </Container>
       </div>
 
-      <Container className="grid gap-10 py-12 sm:py-16 lg:grid-cols-12 lg:gap-14">
+      <Container className="grid gap-10 py-10 sm:py-14 lg:grid-cols-12 lg:gap-14">
         <div className="lg:col-span-7">
-          {capa ? (
-            <Image
-              src={capa.src}
-              alt={capa.alt}
-              width={capa.width}
-              height={capa.height}
-              priority
-              sizes="(min-width: 1024px) 58vw, 100vw"
-              className="aspect-[4/3] w-full object-cover"
-            />
-          ) : (
-            <Placeholder rotulo="Fotos em breve" />
-          )}
-
-          {galeria.length > 0 && (
-            <ul className="mt-4 grid grid-cols-3 gap-4">
-              {galeria.map((imagem) => (
-                <li key={imagem.src}>
-                  <Image
-                    src={imagem.src}
-                    alt={imagem.alt}
-                    width={imagem.width}
-                    height={imagem.height}
-                    sizes="20vw"
-                    className="aspect-square w-full object-cover"
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+          <Galeria imagens={criacao.images} />
         </div>
 
         <div className="lg:col-span-5">
@@ -110,7 +95,6 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
           <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-balance sm:text-4xl">
             {criacao.title}
           </h1>
-          <p className="mt-5 text-lg leading-relaxed text-cinza">{criacao.description}</p>
 
           {criacao.demo && (
             <p className="mt-6 border-l-2 border-laranja bg-grafite/5 px-4 py-3 text-sm text-cinza">
@@ -119,19 +103,21 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
             </p>
           )}
 
-          <div className="mt-8 border-t border-grafite/10 pt-8">
-            {criacao.mercadoLivreUrl ? (
+          {/* Compra antes da descrição: visível sem rolar a página. */}
+          <div className="mt-6">
+            {criacao.mercadoLivreUrl && criacao.status === "publicado" ? (
               <>
                 <a
                   href={criacao.mercadoLivreUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-11 w-full items-center justify-center bg-laranja px-5 py-3 text-sm font-bold tracking-wide text-grafite transition-colors hover:bg-[#ff7f22] sm:w-auto"
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-laranja px-6 py-3 text-base font-bold tracking-wide text-grafite transition-colors hover:bg-[#ff7f22] sm:w-auto"
                 >
                   Comprar no Mercado Livre
+                  <span aria-hidden="true">↗</span>
                   <span className="sr-only"> (abre em nova aba)</span>
                 </a>
-                <p className="mt-3 text-xs text-cinza">
+                <p className="mt-2 text-xs text-cinza">
                   A compra, o pagamento e a entrega são feitos pelo Mercado Livre.
                 </p>
               </>
@@ -139,22 +125,19 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
               <p className="text-sm text-cinza">
                 {criacao.demo
                   ? "Exemplos não estão à venda."
-                  : "Esta criação ainda não está disponível para compra."}
+                  : criacao.status === "arquivado"
+                    ? "Esta criação saiu de linha."
+                    : "Esta criação ainda não está disponível para compra."}
               </p>
             )}
-
-            {criacao.tiktokUrl && (
-              <a
-                href={criacao.tiktokUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 inline-block text-sm font-bold text-laranja-escuro underline-offset-4 hover:underline"
-              >
-                Ver vídeo curto no TikTok
-                <span className="sr-only"> (abre em nova aba)</span>
-              </a>
-            )}
           </div>
+
+          {criacao.description && (
+            <DescricaoExpansivel
+              texto={criacao.description}
+              className="mt-8 border-t border-grafite/10 pt-8"
+            />
+          )}
 
           <ButtonLink href="/criacoes" variante="texto" className="mt-8">
             ← Voltar para as criações
@@ -162,23 +145,7 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
         </div>
       </Container>
 
-      {videoEmbed && (
-        <section aria-labelledby="video-titulo" className="bg-grafite py-16 text-branco">
-          <Container>
-            <h2 id="video-titulo" className="text-2xl font-extrabold">
-              Do laboratório
-            </h2>
-            <iframe
-              src={videoEmbed}
-              title={`Vídeo sobre ${criacao.title}`}
-              loading="lazy"
-              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="mt-6 aspect-video w-full max-w-4xl"
-            />
-          </Container>
-        </section>
-      )}
+      <VideosCriacao criacao={criacao} />
     </article>
   );
 }
