@@ -1,21 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   analisarContato,
   linkEmail,
   linkWhatsApp,
   mensagemDeResposta,
 } from "@/lib/encomendas/contato";
-import {
-  PERIODOS,
-  PERIODO_PADRAO,
-  POR_PAGINA,
-  correspondeABusca,
-  dentroDoPeriodo,
-  type Periodo,
-} from "@/lib/encomendas/filtros";
+import { PERIODO_PADRAO, correspondeABusca } from "@/lib/encomendas/filtros";
 import { codigoParaExibir } from "@/lib/encomendas/validacao";
 import {
   apagarEncomenda,
@@ -23,7 +16,9 @@ import {
   listarEncomendas,
   mudarStatusEncomenda,
 } from "@/lib/firebase/painel";
+import { dentroDoPeriodo, paginar, type Intervalo, type Periodo } from "@/lib/filtros";
 import { cn } from "@/lib/utils";
+import { BuscaEPeriodo, GrupoDeFiltros, Paginacao } from "./BarraDeFiltros";
 import { ConfirmarAcao } from "./ConfirmarAcao";
 import { STATUS_ENCOMENDA, type Encomenda, type StatusEncomenda } from "@/types/encomenda";
 
@@ -81,12 +76,10 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
   const [subfiltro, setSubfiltro] = useState<Subfiltro>("todas");
   const [busca, setBusca] = useState("");
   const [periodo, setPeriodo] = useState<Periodo>(PERIODO_PADRAO);
-  const [intervalo, setIntervalo] = useState({ de: "", ate: "" });
+  const [intervalo, setIntervalo] = useState<Intervalo>({ de: "", ate: "" });
   const [pagina, setPagina] = useState(1);
   // Momento de referência para "últimos N dias", fixado ao abrir a lista.
   const [agora] = useState(() => Date.now());
-  const idBusca = useId();
-  const idPeriodo = useId();
 
   function irParaPagina(numero: number) {
     setPagina(numero);
@@ -173,74 +166,25 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
   );
   const contagem = (opcao: Filtro) =>
     base.filter((encomenda) => passaNoFiltro(encomenda, opcao)).length;
-
-  const totalDePaginas = Math.max(1, Math.ceil(visiveis.length / POR_PAGINA));
-  const paginaAtual = Math.min(pagina, totalDePaginas);
-  const daPagina = visiveis.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
   const contagemDoGrupo = (opcao: Subfiltro) =>
     opcao === "todas"
       ? doGrupo.length
       : doGrupo.filter((encomenda) => encomenda.status === opcao).length;
   const subfiltros = SUBFILTROS[filtro];
 
+  const paginaAtual = paginar(visiveis, pagina);
+
   return (
     <>
-      <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_auto]">
-        <div>
-          <label htmlFor={idBusca} className="sr-only">
-            Buscar pedido
-          </label>
-          <input
-            id={idBusca}
-            type="search"
-            value={busca}
-            onChange={(e) => filtrar(() => setBusca(e.target.value))}
-            placeholder="Buscar por código, nome, contato ou texto"
-            className="block min-h-11 w-full border border-grafite/20 bg-white px-3 text-base focus:border-grafite"
-          />
-        </div>
-        <div>
-          <label htmlFor={idPeriodo} className="sr-only">
-            Período
-          </label>
-          <select
-            id={idPeriodo}
-            value={periodo}
-            onChange={(e) => filtrar(() => setPeriodo(e.target.value as Periodo))}
-            className="block min-h-11 w-full border border-grafite/20 bg-white px-3 text-base sm:w-auto"
-          >
-            {PERIODOS.map(([valor, nome]) => (
-              <option key={valor} value={valor}>
-                {nome}
-              </option>
-            ))}
-          </select>
-        </div>
-        {periodo === "personalizado" && (
-          <div className="flex flex-wrap items-end gap-3 sm:col-span-2">
-            <label className="text-sm">
-              <span className="font-bold">De</span>
-              <input
-                type="date"
-                value={intervalo.de}
-                max={intervalo.ate || undefined}
-                onChange={(e) => filtrar(() => setIntervalo((atual) => ({ ...atual, de: e.target.value })))}
-                className="mt-1 block min-h-11 border border-grafite/20 bg-white px-3 text-base"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="font-bold">Até</span>
-              <input
-                type="date"
-                value={intervalo.ate}
-                min={intervalo.de || undefined}
-                onChange={(e) => filtrar(() => setIntervalo((atual) => ({ ...atual, ate: e.target.value })))}
-                className="mt-1 block min-h-11 border border-grafite/20 bg-white px-3 text-base"
-              />
-            </label>
-          </div>
-        )}
-      </div>
+      <BuscaEPeriodo
+        busca={busca}
+        onBusca={(valor) => filtrar(() => setBusca(valor))}
+        placeholder="Buscar por código, nome, contato ou texto"
+        periodo={periodo}
+        onPeriodo={(valor) => filtrar(() => setPeriodo(valor))}
+        intervalo={intervalo}
+        onIntervalo={(valor) => filtrar(() => setIntervalo(valor))}
+      />
 
       {abertasForaDoPeriodo > 0 && (
         <p className="mb-5 border-l-2 border-laranja bg-white px-4 py-3 text-sm">
@@ -257,63 +201,32 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
         </p>
       )}
 
-      <div role="group" aria-label="Filtrar pedidos" className="mb-5 flex flex-wrap gap-2">
-        {(
-          [
-            ["abertas", "Abertos"],
-            ["encerradas", "Encerrados"],
-            ["todas", "Todos"],
-          ] as const
-        ).map(([valor, nome]) => (
-          <button
-            key={valor}
-            type="button"
-            aria-pressed={filtro === valor}
-            onClick={() =>
-              filtrar(() => {
-                setFiltro(valor);
-                setSubfiltro("todas");
-              })
-            }
-            className={cn(
-              "inline-flex min-h-10 items-center gap-2 border px-4 text-sm font-bold",
-              filtro === valor
-                ? "border-grafite bg-grafite text-branco"
-                : "border-grafite/20 bg-white hover:border-grafite",
-            )}
-          >
-            {nome}
-            <span className="font-mono text-xs font-medium opacity-70">{contagem(valor)}</span>
-          </button>
-        ))}
-      </div>
+      <GrupoDeFiltros
+        rotulo="Filtrar pedidos"
+        opcoes={[
+          ["abertas", "Abertos"],
+          ["encerradas", "Encerrados"],
+          ["todas", "Todos"],
+        ]}
+        valor={filtro}
+        onEscolher={(valor) =>
+          filtrar(() => {
+            setFiltro(valor);
+            setSubfiltro("todas");
+          })
+        }
+        contagem={contagem}
+      />
 
       {subfiltros && (
-        <div
-          role="group"
-          aria-label={filtro === "abertas" ? "Filtrar pedidos abertos" : "Filtrar pedidos encerrados"}
-          className="-mt-2 mb-5 flex flex-wrap items-center gap-2 border-l-2 border-grafite/15 pl-3"
-        >
-          {[["todas", "Todos"] as const, ...subfiltros].map(([valor, nome]) => (
-            <button
-              key={valor}
-              type="button"
-              aria-pressed={subfiltro === valor}
-              onClick={() => filtrar(() => setSubfiltro(valor))}
-              className={cn(
-                "inline-flex min-h-9 items-center gap-2 border px-3 text-sm font-bold",
-                subfiltro === valor
-                  ? "border-grafite text-grafite"
-                  : "border-transparent text-cinza hover:text-grafite",
-              )}
-            >
-              {nome}
-              <span className="font-mono text-xs font-medium opacity-70">
-                {contagemDoGrupo(valor)}
-              </span>
-            </button>
-          ))}
-        </div>
+        <GrupoDeFiltros<Subfiltro>
+          rotulo={filtro === "abertas" ? "Filtrar pedidos abertos" : "Filtrar pedidos encerrados"}
+          nivel={2}
+          opcoes={[["todas", "Todos"], ...subfiltros]}
+          valor={subfiltro}
+          onEscolher={(valor) => filtrar(() => setSubfiltro(valor))}
+          contagem={contagemDoGrupo}
+        />
       )}
 
       {visiveis.length === 0 && (
@@ -329,7 +242,7 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
       )}
 
       <ul className="space-y-3">
-        {daPagina.map((encomenda) => {
+        {paginaAtual.itens.map((encomenda) => {
           const expandida = aberta === encomenda.id;
           return (
             <li key={encomenda.id} className="border border-grafite/10 bg-white">
@@ -420,35 +333,13 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
         })}
       </ul>
 
-      {visiveis.length > POR_PAGINA && (
-        <nav aria-label="Páginas de pedidos" className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-cinza">
-            {(paginaAtual - 1) * POR_PAGINA + 1}–{Math.min(paginaAtual * POR_PAGINA, visiveis.length)} de{" "}
-            {visiveis.length} pedidos
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => irParaPagina(paginaAtual - 1)}
-              disabled={paginaAtual === 1}
-              className="inline-flex min-h-10 items-center border border-grafite/20 bg-white px-4 text-sm font-bold hover:border-grafite disabled:opacity-40"
-            >
-              ← Anterior
-            </button>
-            <span className="px-2 font-mono text-sm" aria-live="polite">
-              {paginaAtual} / {totalDePaginas}
-            </span>
-            <button
-              type="button"
-              onClick={() => irParaPagina(paginaAtual + 1)}
-              disabled={paginaAtual === totalDePaginas}
-              className="inline-flex min-h-10 items-center border border-grafite/20 bg-white px-4 text-sm font-bold hover:border-grafite disabled:opacity-40"
-            >
-              Próxima →
-            </button>
-          </div>
-        </nav>
-      )}
+      <Paginacao
+        pagina={paginaAtual.pagina}
+        totalDePaginas={paginaAtual.totalDePaginas}
+        totalDeItens={visiveis.length}
+        nomeDosItens="pedidos"
+        onPagina={irParaPagina}
+      />
     </>
   );
 }

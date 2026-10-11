@@ -1,8 +1,6 @@
 "use client";
 
 import type { User } from "firebase/auth";
-import Image from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
@@ -13,8 +11,9 @@ import {
   observarUsuario,
   sair,
 } from "@/lib/firebase/painel";
-import { CATEGORIAS, type Criacao, type StatusCriacao } from "@/types/criacao";
+import type { Criacao } from "@/types/criacao";
 import { FormCriacao } from "./FormCriacao";
+import { ListaCriacoes } from "./ListaCriacoes";
 import { LimpezaFotos } from "./LimpezaFotos";
 import { ListaEncomendas } from "./ListaEncomendas";
 
@@ -37,16 +36,8 @@ const ERROS_DE_LOGIN: Record<string, string> = {
   "auth/network-request-failed": "Sem conexão com o Firebase. Verifique a internet.",
 };
 
-const SITUACAO: Record<StatusCriacao, { nome: string; cor: string }> = {
-  publicado: { nome: "Publicado", cor: "bg-laranja text-grafite" },
-  rascunho: { nome: "Rascunho", cor: "bg-grafite/10 text-grafite" },
-  arquivado: { nome: "Arquivado", cor: "bg-grafite/10 text-cinza" },
-};
-
 const botaoPrimario =
   "inline-flex min-h-11 items-center justify-center bg-laranja px-5 text-sm font-bold text-grafite hover:bg-[#ff7f22]";
-const botaoSecundario =
-  "inline-flex min-h-11 items-center justify-center border border-grafite/25 px-5 text-sm font-bold hover:border-grafite";
 
 export function PainelAdmin() {
   if (!isFirebaseConfigured()) {
@@ -166,10 +157,7 @@ function Painel() {
     );
   }
 
-  if (edicao) {
-    return (
-      <>
-        {barra}
+  const editor = edicao && (
         <div className="max-w-2xl">
           <FormCriacao
             criacao={edicao === "nova" ? undefined : edicao}
@@ -184,9 +172,7 @@ function Painel() {
             }}
           />
         </div>
-      </>
-    );
-  }
+  );
 
   const abas = (
     <div role="tablist" aria-label="Seções do painel" className="mb-8 flex gap-1 border-b border-grafite/10">
@@ -242,74 +228,21 @@ function Painel() {
   return (
     <>
       {barra}
-      {abas}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-extrabold">Criações</h2>
-          <p className="mt-1 text-sm text-cinza">
-            O site é atualizado assim que você salva.
-          </p>
+      {editor}
+      {/* Escondida, não desmontada: busca e filtros sobrevivem à edição. */}
+      <div hidden={Boolean(edicao)}>
+        {abas}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-extrabold">Criações</h2>
+            <p className="mt-1 text-sm text-cinza">O site é atualizado assim que você salva.</p>
+          </div>
+          <button type="button" onClick={() => setEdicao("nova")} className={botaoPrimario}>
+            Nova criação
+          </button>
         </div>
-        <button type="button" onClick={() => setEdicao("nova")} className={botaoPrimario}>
-          Nova criação
-        </button>
+        <ListaCriacoes criacoes={estado.criacoes} onEditar={setEdicao} />
       </div>
-
-      {estado.criacoes.length === 0 ? (
-        <p className="mt-10 border border-dashed border-grafite/20 px-6 py-10 text-center text-cinza">
-          Nenhuma criação cadastrada ainda.
-        </p>
-      ) : (
-        <ul className="mt-8 divide-y divide-grafite/10 border-y border-grafite/10">
-          {estado.criacoes.map((criacao) => (
-            <li key={criacao.id} className="flex flex-wrap items-center gap-4 py-4">
-              {criacao.images[0] ? (
-                <Image
-                  src={criacao.images[0].src}
-                  alt=""
-                  width={criacao.images[0].width}
-                  height={criacao.images[0].height}
-                  sizes="64px"
-                  className="size-16 shrink-0 bg-[#e7e3db] object-cover"
-                />
-              ) : (
-                <span
-                  aria-hidden="true"
-                  className="flex size-16 shrink-0 items-center justify-center bg-[#e7e3db] font-mono text-[0.6rem] text-cinza uppercase"
-                >
-                  Sem foto
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="font-bold">{criacao.title}</p>
-                <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-                  <span
-                    className={`px-2 py-0.5 font-mono tracking-wider uppercase ${SITUACAO[criacao.status].cor}`}
-                  >
-                    {SITUACAO[criacao.status].nome}
-                  </span>
-                  {criacao.featured && (
-                    <span className="border border-laranja px-2 py-0.5 font-mono tracking-wider text-laranja-escuro uppercase">
-                      Destaque
-                    </span>
-                  )}
-                  <span className="text-cinza">{CATEGORIAS[criacao.category]}</span>
-                </p>
-              </div>
-              <div className="flex gap-2">
-                {criacao.status !== "rascunho" && (
-                  <Link href={`/criacoes/${criacao.slug}`} className={botaoSecundario}>
-                    Ver
-                  </Link>
-                )}
-                <button type="button" onClick={() => setEdicao(criacao)} className={botaoSecundario}>
-                  Editar
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
     </>
   );
 }
