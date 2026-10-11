@@ -10,9 +10,8 @@ service cloud.firestore {
     // Único administrador, identificado pelo UID do Firebase Authentication
     // (o /admin mostra o UID de quem entrou). O UID não é segredo nem dado
     // pessoal; por isso fica aqui, num repositório público, no lugar do e-mail.
-    // Enquanto for o texto provisório abaixo, ninguém tem acesso de escrita.
     function isAdmin() {
-      return request.auth != null && request.auth.uid == 'UID_DO_ADMIN';
+      return request.auth != null && request.auth.uid == '585cpcqio5Y3f3WXYRyZYk84VK93';
     }
 
     function urlOuNulo(valor) {
