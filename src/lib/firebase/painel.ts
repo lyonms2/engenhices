@@ -192,3 +192,43 @@ export async function avisarSiteAtualizado() {
     console.warn("[admin] Não foi possível atualizar o cache do site:", erro);
   }
 }
+
+export type FotoNaoUsada = { src: string; publicId: string; bytes: number; criadaEm: string };
+
+export type ResultadoDaVerificacao = {
+  total: number;
+  recentes: number;
+  naoUsadas: FotoNaoUsada[];
+};
+
+/**
+ * Procura fotos do Cloudinary que nenhuma criação ou pedido usa. Se a
+ * leitura de criações ou pedidos falhar, a função falha também: uma lista
+ * "em uso" incompleta faria fotos em uso parecerem sobras.
+ */
+export async function buscarFotosNaoUsadas(): Promise<ResultadoDaVerificacao> {
+  const [criacoes, encomendas] = await Promise.all([listarTodasAsCriacoes(), listarEncomendas()]);
+  const usadas = [
+    ...criacoes.flatMap((criacao) => criacao.images.map((imagem) => imagem.src)),
+    ...encomendas.flatMap((encomenda) => encomenda.fotos.map((foto) => foto.src)),
+  ];
+
+  const resposta = await fetch("/api/fotos/nao-usadas", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${await obterTokenDeId()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ usadas }),
+  });
+  const dados = (await resposta.json().catch(() => ({}))) as ResultadoDaVerificacao & { erro?: string };
+  if (!resposta.ok) throw new Error(dados.erro ?? "Não foi possível verificar as fotos.");
+  return dados;
+}
+
+/** Apaga muitas fotos, em lotes do tamanho aceito pelo servidor. */
+export async function apagarFotosEmLotes(urls: string[]) {
+  for (let inicio = 0; inicio < urls.length; inicio += 50) {
+    await apagarFotos(urls.slice(inicio, inicio + 50));
+  }
+}

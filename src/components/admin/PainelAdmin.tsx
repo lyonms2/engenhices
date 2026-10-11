@@ -15,6 +15,7 @@ import {
 } from "@/lib/firebase/painel";
 import { CATEGORIAS, type Criacao, type StatusCriacao } from "@/types/criacao";
 import { FormCriacao } from "./FormCriacao";
+import { LimpezaFotos } from "./LimpezaFotos";
 import { ListaEncomendas } from "./ListaEncomendas";
 
 type Estado =
@@ -62,7 +63,7 @@ function Painel() {
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
   const [edicao, setEdicao] = useState<Edicao>(null);
   const [erroLogin, setErroLogin] = useState<string | null>(null);
-  const [aba, setAba] = useState<"criacoes" | "encomendas">("criacoes");
+  const [aba, setAba] = useState<"criacoes" | "encomendas" | "fotos">("criacoes");
   const [novas, setNovas] = useState(0);
 
   const carregar = useCallback(async (usuario: User) => {
@@ -193,6 +194,7 @@ function Painel() {
         [
           ["criacoes", "Criações", 0],
           ["encomendas", "Encomendas", novas],
+          ["fotos", "Fotos", 0],
         ] as const
       ).map(([valor, nome, contagem]) => (
         <button
@@ -216,6 +218,16 @@ function Painel() {
       ))}
     </div>
   );
+
+  if (aba === "fotos") {
+    return (
+      <>
+        {barra}
+        {abas}
+        <LimpezaFotos />
+      </>
+    );
+  }
 
   if (aba === "encomendas") {
     return (

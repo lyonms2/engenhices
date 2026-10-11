@@ -108,3 +108,44 @@ export async function apagarDoServidor(publicIds: string[], credenciais: Credenc
   );
   if (falhas.length > 0) throw new Error(`Não apagou: ${falhas.map(([id]) => id).join(", ")}`);
 }
+
+export type FotoNoCloudinary = {
+  src: string;
+  publicId: string;
+  bytes: number;
+  criadaEm: string;
+};
+
+/** Todas as fotos da pasta do site no Cloudinary (Admin API, paginada). */
+export async function listarFotosDoSite(credenciais: CredenciaisCloudinary): Promise<FotoNoCloudinary[]> {
+  const autorizacao = `Basic ${Buffer.from(`${credenciais.apiKey}:${credenciais.apiSecret}`).toString("base64")}`;
+  const fotos: FotoNoCloudinary[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const parametros = new URLSearchParams({ prefix: PREFIXO_PERMITIDO, max_results: "500" });
+    if (cursor) parametros.set("next_cursor", cursor);
+    const resposta = await fetch(
+      `https://api.cloudinary.com/v1_1/${credenciais.cloudName}/resources/image/upload?${parametros}`,
+      { headers: { Authorization: autorizacao } },
+    );
+    const dados = (await resposta.json()) as {
+      resources?: { public_id: string; secure_url: string; bytes: number; created_at: string }[];
+      next_cursor?: string;
+      error?: { message?: string };
+    };
+    if (!resposta.ok) throw new Error(dados.error?.message ?? "Falha ao listar fotos no Cloudinary.");
+
+    for (const foto of dados.resources ?? []) {
+      fotos.push({
+        src: foto.secure_url,
+        publicId: foto.public_id,
+        bytes: foto.bytes,
+        criadaEm: foto.created_at,
+      });
+    }
+    cursor = dados.next_cursor;
+  } while (cursor);
+
+  return fotos;
+}
