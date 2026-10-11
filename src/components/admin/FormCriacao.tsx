@@ -8,7 +8,14 @@ import {
   type DadosCriacao,
 } from "@/lib/firebase/painel";
 import { gerarSlug } from "@/lib/utils";
-import { CATEGORIAS, type Categoria, type Criacao, type StatusCriacao } from "@/types/criacao";
+import { GerenciadorFotos } from "./GerenciadorFotos";
+import {
+  CATEGORIAS,
+  type Categoria,
+  type Criacao,
+  type ImagemCriacao,
+  type StatusCriacao,
+} from "@/types/criacao";
 
 type FormCriacaoProps = {
   /** Criação em edição; ausente ao criar uma nova. */
@@ -38,6 +45,8 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
   const [youtubeUrl, setYoutubeUrl] = useState(criacao?.youtubeUrl ?? "");
   const [tiktokUrl, setTiktokUrl] = useState(criacao?.tiktokUrl ?? "");
   const [mercadoLivreUrl, setMercadoLivreUrl] = useState(criacao?.mercadoLivreUrl ?? "");
+  const [images, setImages] = useState<ImagemCriacao[]>(criacao?.images ?? []);
+  const [enviandoFotos, setEnviandoFotos] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -56,7 +65,7 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
       title: title.trim(),
       slug: slugFinal,
       description: description.trim(),
-      images: criacao?.images ?? [],
+      images: images.map((imagem) => ({ ...imagem, alt: imagem.alt.trim() })),
       category,
       featured,
       status,
@@ -168,10 +177,7 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
         </Campo>
       </fieldset>
 
-      <p className="border-l-2 border-grafite/20 pl-3 text-sm text-cinza">
-        Fotos: o envio de imagens será ligado na próxima etapa. Até lá, a página mostra
-        &ldquo;Fotos em breve&rdquo;.
-      </p>
+      <GerenciadorFotos imagens={images} onChange={setImages} onEnviando={setEnviandoFotos} />
 
       {erro && (
         <p role="alert" className="border-l-2 border-red-700 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -182,10 +188,10 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="submit"
-          disabled={salvando}
+          disabled={salvando || enviandoFotos}
           className="inline-flex min-h-11 items-center justify-center bg-laranja px-6 text-sm font-bold text-grafite hover:bg-[#ff7f22] disabled:opacity-60"
         >
-          {salvando ? "Salvando…" : "Salvar"}
+          {salvando ? "Salvando…" : enviandoFotos ? "Aguardando fotos…" : "Salvar"}
         </button>
         <button
           type="button"

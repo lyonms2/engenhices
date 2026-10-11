@@ -49,6 +49,13 @@ export async function sair() {
   await signOut(getAuth(app()));
 }
 
+/** Token de ID do usuário logado, para o servidor confirmar quem é o administrador. */
+export async function obterTokenDeId(): Promise<string> {
+  const usuario = getAuth(app()).currentUser;
+  if (!usuario) throw new Error("Sessão expirada. Entre de novo.");
+  return usuario.getIdToken();
+}
+
 /** Todas as criações, inclusive rascunhos. Só o administrador consegue ler. */
 export async function listarTodasAsCriacoes(): Promise<Criacao[]> {
   const resultado = await getDocs(collection(getFirestore(app()), COLECAO_CRIACOES));
