@@ -1,0 +1,111 @@
+import type { Criacao } from "@/types/criacao";
+
+/**
+ * Conteúdo DEMONSTRATIVO. Nenhum destes itens é um produto real da
+ * Engenhices: servem só para desenhar o catálogo até os produtos reais serem
+ * cadastrados no Firestore. Todos têm `demo: true` e nenhum link externo.
+ */
+export const criacoesDemo: Criacao[] = [
+  {
+    id: "demo-01",
+    title: "Suporte articulado de bancada",
+    slug: "exemplo-suporte-articulado",
+    description:
+      "Exemplo de peça funcional: um braço com juntas de atrito que segura celular ou lupa na altura certa enquanto as mãos trabalham.",
+    images: [],
+    category: "ferramentas",
+    featured: true,
+    status: "publicado",
+    youtubeUrl: null,
+    tiktokUrl: null,
+    mercadoLivreUrl: null,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    demo: true,
+  },
+  {
+    id: "demo-02",
+    title: "Organizador modular de gavetas",
+    slug: "exemplo-organizador-modular",
+    description:
+      "Exemplo de sistema de módulos encaixáveis, dimensionados em múltiplos de uma mesma grade, que se adaptam a qualquer gaveta.",
+    images: [],
+    category: "organizacao",
+    featured: true,
+    status: "publicado",
+    youtubeUrl: null,
+    tiktokUrl: null,
+    mercadoLivreUrl: null,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    demo: true,
+  },
+  {
+    id: "demo-03",
+    title: "Dobradiça impressa já montada",
+    slug: "exemplo-dobradica-print-in-place",
+    description:
+      "Exemplo de mecanismo impresso em uma única peça, com folgas calculadas para sair da impressora já se movendo.",
+    images: [],
+    category: "mecanismos",
+    featured: true,
+    status: "publicado",
+    youtubeUrl: null,
+    tiktokUrl: null,
+    mercadoLivreUrl: null,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    demo: true,
+  },
+  {
+    id: "demo-04",
+    title: "Gabarito de furação ajustável",
+    slug: "exemplo-gabarito-de-furacao",
+    description:
+      "Exemplo de ferramenta de oficina: guia que mantém a broca no prumo e repete o mesmo espaçamento entre furos.",
+    images: [],
+    category: "ferramentas",
+    featured: false,
+    status: "publicado",
+    youtubeUrl: null,
+    tiktokUrl: null,
+    mercadoLivreUrl: null,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    demo: true,
+  },
+  {
+    id: "demo-05",
+    title: "Luminária de superfície paramétrica",
+    slug: "exemplo-luminaria-parametrica",
+    description:
+      "Exemplo de peça decorativa gerada por parâmetros: a mesma regra produz cúpulas diferentes a cada variação.",
+    images: [],
+    category: "decoracao",
+    featured: false,
+    status: "publicado",
+    youtubeUrl: null,
+    tiktokUrl: null,
+    mercadoLivreUrl: null,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    demo: true,
+  },
+  {
+    id: "demo-06",
+    title: "Protótipo de trava por came",
+    slug: "exemplo-trava-por-came",
+    description:
+      "Exemplo de protótipo de teste: uma trava que fecha com meia volta, feita para medir esforço e desgaste antes da versão final.",
+    images: [],
+    category: "prototipos",
+    featured: false,
+    status: "publicado",
+    youtubeUrl: null,
+    tiktokUrl: null,
+    mercadoLivreUrl: null,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    demo: true,
+  },
+];

@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Identidade visual da Engenhices.
+ * As quatro cores oficiais ficam aqui; as variações (escuro/claro) existem
+ * só para garantir contraste de texto (WCAG AA) sobre cada fundo.
+ */
+@theme {
+  --color-laranja: #ff6b00;
+  --color-laranja-escuro: #b84a00; /* laranja para TEXTO sobre fundo claro */
+  --color-grafite: #1f2426;
+  --color-grafite-escuro: #161a1b;
+  --color-grafite-claro: #2b3134;
+  --color-branco: #f5f3ee;
+  --color-cinza: #6b6f72;
+  --color-cinza-claro: #a4a8aa; /* cinza para TEXTO sobre fundo escuro */
+  --color-linha: #d9d5cc;
+
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background-color: var(--color-branco);
+    color: var(--color-grafite);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-laranja);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-laranja);
+    color: var(--color-grafite);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Quadriculado de prancheta técnica, usado nas áreas escuras. */
+@utility bg-prancheta {
+  background-image:
+    linear-gradient(to right, rgb(245 243 238 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(245 243 238 / 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Mesma ideia, para fundos claros. */
+@utility bg-prancheta-clara {
+  background-image:
+    linear-gradient(to right, rgb(31 36 38 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(31 36 38 / 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animar-surgir {
+  animation: surgir 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

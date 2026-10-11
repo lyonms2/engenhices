@@ -1,0 +1,45 @@
+# Integração com o Firebase (próxima etapa)
+
+Nada aqui está ligado ainda. Este é o roteiro para conectar sem reestruturar o site.
+
+## 1. Instalar o SDK
+
+```bash
+npm install firebase
+```
+
+## 2. Variáveis de ambiente
+
+Copie `.env.example` para `.env.local` e preencha com os valores do console
+(Configurações do projeto → Seus apps → App da Web). Na Vercel, cadastre as
+mesmas variáveis em *Settings → Environment Variables*.
+
+## 3. Inicialização
+
+Criar `src/lib/firebase/client.ts` usando `getFirebasePublicConfig()` de
+`config.ts`, com `getApps().length ? getApp() : initializeApp(config)` para não
+inicializar duas vezes.
+
+## 4. Trocar a fonte de dados
+
+Só `src/lib/criacoes.ts` muda: as funções passam a consultar a coleção
+`criacoes` (filtrando `status != "rascunho"`) e a converter `Timestamp` em
+string ISO. Páginas e componentes não mudam.
+
+## 5. Regras de segurança
+
+Publicar regras **restritivas** antes de qualquer dado real:
+
+- `criacoes`: leitura pública só de documentos publicados; escrita apenas para
+  administradores autenticados (custom claim `admin`).
+- `encomendas`: criação pública com validação de campos e tamanho; leitura e
+  alteração só para administradores.
+- Storage: upload de fotos de referência limitado por tipo e tamanho; leitura
+  de imagens de produtos pública.
+
+Nunca usar regras abertas (`allow read, write: if true`), nem em teste.
+
+## 6. Área administrativa
+
+A rota `/admin` só deve ser criada junto com o Firebase Authentication e a
+verificação no servidor. Até lá ela não existe (responde 404).
