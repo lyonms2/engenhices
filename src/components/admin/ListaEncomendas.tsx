@@ -37,8 +37,28 @@ type Estado =
 /** Concluídas e recusadas saem da frente; o resto ainda pede atenção. */
 const ENCERRADAS: StatusEncomenda[] = ["concluida", "recusada"];
 type Filtro = "abertas" | "encerradas" | "todas";
-/** Dentro de "Encerrados": todos, só concluídos ou só recusados. */
-type Subfiltro = "todas" | "concluida" | "recusada";
+/** Segundo nível do filtro: todas as situações do grupo, ou uma só. */
+type Subfiltro = "todas" | StatusEncomenda;
+
+const SUBFILTROS: Partial<Record<Filtro, readonly (readonly [StatusEncomenda, string])[]>> = {
+  abertas: [
+    ["nova", "Novas"],
+    ["em-analise", "Em análise"],
+    ["orcamento-enviado", "Orçamento enviado"],
+  ],
+  encerradas: [
+    ["concluida", "Concluídos"],
+    ["recusada", "Recusados"],
+  ],
+};
+
+const VAZIO_POR_SITUACAO: Record<StatusEncomenda, string> = {
+  nova: "Nenhum pedido novo.",
+  "em-analise": "Nenhum pedido em análise.",
+  "orcamento-enviado": "Nenhum pedido com orçamento enviado.",
+  concluida: "Nenhum pedido concluído.",
+  recusada: "Nenhum pedido recusado.",
+};
 
 function passaNoFiltro(encomenda: Encomenda, filtro: Filtro): boolean {
   if (filtro === "todas") return true;
@@ -109,18 +129,17 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
     );
   }
 
-  const encerradas = estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, "encerradas"));
-  const visiveis = estado.encomendas.filter(
-    (encomenda) =>
-      passaNoFiltro(encomenda, filtro) &&
-      (filtro !== "encerradas" || subfiltro === "todas" || encomenda.status === subfiltro),
+  const doGrupo = estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, filtro));
+  const visiveis = doGrupo.filter(
+    (encomenda) => subfiltro === "todas" || encomenda.status === subfiltro,
   );
   const contagem = (opcao: Filtro) =>
     estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, opcao)).length;
-  const contagemEncerradas = (opcao: Subfiltro) =>
+  const contagemDoGrupo = (opcao: Subfiltro) =>
     opcao === "todas"
-      ? encerradas.length
-      : encerradas.filter((encomenda) => encomenda.status === opcao).length;
+      ? doGrupo.length
+      : doGrupo.filter((encomenda) => encomenda.status === opcao).length;
+  const subfiltros = SUBFILTROS[filtro];
 
   return (
     <>
@@ -153,19 +172,13 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
         ))}
       </div>
 
-      {filtro === "encerradas" && (
+      {subfiltros && (
         <div
           role="group"
-          aria-label="Filtrar pedidos encerrados"
+          aria-label={filtro === "abertas" ? "Filtrar pedidos abertos" : "Filtrar pedidos encerrados"}
           className="-mt-2 mb-5 flex flex-wrap items-center gap-2 border-l-2 border-grafite/15 pl-3"
         >
-          {(
-            [
-              ["todas", "Todos"],
-              ["concluida", "Concluídos"],
-              ["recusada", "Recusados"],
-            ] as const
-          ).map(([valor, nome]) => (
+          {[["todas", "Todos"] as const, ...subfiltros].map(([valor, nome]) => (
             <button
               key={valor}
               type="button"
@@ -180,7 +193,7 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
             >
               {nome}
               <span className="font-mono text-xs font-medium opacity-70">
-                {contagemEncerradas(valor)}
+                {contagemDoGrupo(valor)}
               </span>
             </button>
           ))}
@@ -189,13 +202,11 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
 
       {visiveis.length === 0 && (
         <p className="border border-dashed border-grafite/20 px-6 py-10 text-center text-cinza">
-          {filtro === "abertas"
-            ? "Nenhum pedido em aberto."
-            : filtro === "encerradas" && subfiltro === "concluida"
-              ? "Nenhum pedido concluído."
-              : filtro === "encerradas" && subfiltro === "recusada"
-                ? "Nenhum pedido recusado."
-                : "Nenhum pedido aqui."}
+          {subfiltro !== "todas"
+            ? VAZIO_POR_SITUACAO[subfiltro]
+            : filtro === "abertas"
+              ? "Nenhum pedido em aberto."
+              : "Nenhum pedido aqui."}
         </p>
       )}
 
