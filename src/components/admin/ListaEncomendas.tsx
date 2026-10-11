@@ -1,13 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import {
   analisarContato,
   linkEmail,
   linkWhatsApp,
   mensagemDeResposta,
 } from "@/lib/encomendas/contato";
+import {
+  PERIODOS,
+  PERIODO_PADRAO,
+  POR_PAGINA,
+  correspondeABusca,
+  dentroDoPeriodo,
+  type Periodo,
+} from "@/lib/encomendas/filtros";
 import { codigoParaExibir } from "@/lib/encomendas/validacao";
 import {
   apagarEncomenda,
@@ -71,6 +79,26 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
   const [aberta, setAberta] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("abertas");
   const [subfiltro, setSubfiltro] = useState<Subfiltro>("todas");
+  const [busca, setBusca] = useState("");
+  const [periodo, setPeriodo] = useState<Periodo>(PERIODO_PADRAO);
+  const [intervalo, setIntervalo] = useState({ de: "", ate: "" });
+  const [pagina, setPagina] = useState(1);
+  // Momento de referência para "últimos N dias", fixado ao abrir a lista.
+  const [agora] = useState(() => Date.now());
+  const idBusca = useId();
+  const idPeriodo = useId();
+
+  function irParaPagina(numero: number) {
+    setPagina(numero);
+    setAberta(null);
+  }
+
+  /** Qualquer mudança de filtro volta para a primeira página. */
+  function filtrar(mudanca: () => void) {
+    mudanca();
+    setPagina(1);
+    setAberta(null);
+  }
 
   useEffect(() => {
     let ativo = true;
@@ -129,12 +157,26 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
     );
   }
 
-  const doGrupo = estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, filtro));
+  // Busca e período valem para tudo, inclusive para as contagens dos filtros.
+  const encontradas = estado.encomendas.filter((encomenda) => correspondeABusca(encomenda, busca));
+  const base = encontradas.filter((encomenda) =>
+    dentroDoPeriodo(encomenda.createdAt, periodo, agora, intervalo),
+  );
+  // Pedidos abertos escondidos só pelo período: avisa para não passarem despercebidos.
+  const abertasForaDoPeriodo =
+    encontradas.filter((encomenda) => passaNoFiltro(encomenda, "abertas")).length -
+    base.filter((encomenda) => passaNoFiltro(encomenda, "abertas")).length;
+
+  const doGrupo = base.filter((encomenda) => passaNoFiltro(encomenda, filtro));
   const visiveis = doGrupo.filter(
     (encomenda) => subfiltro === "todas" || encomenda.status === subfiltro,
   );
   const contagem = (opcao: Filtro) =>
-    estado.encomendas.filter((encomenda) => passaNoFiltro(encomenda, opcao)).length;
+    base.filter((encomenda) => passaNoFiltro(encomenda, opcao)).length;
+
+  const totalDePaginas = Math.max(1, Math.ceil(visiveis.length / POR_PAGINA));
+  const paginaAtual = Math.min(pagina, totalDePaginas);
+  const daPagina = visiveis.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
   const contagemDoGrupo = (opcao: Subfiltro) =>
     opcao === "todas"
       ? doGrupo.length
@@ -143,6 +185,78 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
 
   return (
     <>
+      <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+        <div>
+          <label htmlFor={idBusca} className="sr-only">
+            Buscar pedido
+          </label>
+          <input
+            id={idBusca}
+            type="search"
+            value={busca}
+            onChange={(e) => filtrar(() => setBusca(e.target.value))}
+            placeholder="Buscar por código, nome, contato ou texto"
+            className="block min-h-11 w-full border border-grafite/20 bg-white px-3 text-base focus:border-grafite"
+          />
+        </div>
+        <div>
+          <label htmlFor={idPeriodo} className="sr-only">
+            Período
+          </label>
+          <select
+            id={idPeriodo}
+            value={periodo}
+            onChange={(e) => filtrar(() => setPeriodo(e.target.value as Periodo))}
+            className="block min-h-11 w-full border border-grafite/20 bg-white px-3 text-base sm:w-auto"
+          >
+            {PERIODOS.map(([valor, nome]) => (
+              <option key={valor} value={valor}>
+                {nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        {periodo === "personalizado" && (
+          <div className="flex flex-wrap items-end gap-3 sm:col-span-2">
+            <label className="text-sm">
+              <span className="font-bold">De</span>
+              <input
+                type="date"
+                value={intervalo.de}
+                max={intervalo.ate || undefined}
+                onChange={(e) => filtrar(() => setIntervalo((atual) => ({ ...atual, de: e.target.value })))}
+                className="mt-1 block min-h-11 border border-grafite/20 bg-white px-3 text-base"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="font-bold">Até</span>
+              <input
+                type="date"
+                value={intervalo.ate}
+                min={intervalo.de || undefined}
+                onChange={(e) => filtrar(() => setIntervalo((atual) => ({ ...atual, ate: e.target.value })))}
+                className="mt-1 block min-h-11 border border-grafite/20 bg-white px-3 text-base"
+              />
+            </label>
+          </div>
+        )}
+      </div>
+
+      {abertasForaDoPeriodo > 0 && (
+        <p className="mb-5 border-l-2 border-laranja bg-white px-4 py-3 text-sm">
+          {abertasForaDoPeriodo === 1
+            ? "1 pedido aberto é mais antigo que o período escolhido."
+            : `${abertasForaDoPeriodo} pedidos abertos são mais antigos que o período escolhido.`}{" "}
+          <button
+            type="button"
+            onClick={() => filtrar(() => setPeriodo("tudo"))}
+            className="font-bold underline underline-offset-4"
+          >
+            Ver todo o período
+          </button>
+        </p>
+      )}
+
       <div role="group" aria-label="Filtrar pedidos" className="mb-5 flex flex-wrap gap-2">
         {(
           [
@@ -155,10 +269,12 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
             key={valor}
             type="button"
             aria-pressed={filtro === valor}
-            onClick={() => {
-              setFiltro(valor);
-              setSubfiltro("todas");
-            }}
+            onClick={() =>
+              filtrar(() => {
+                setFiltro(valor);
+                setSubfiltro("todas");
+              })
+            }
             className={cn(
               "inline-flex min-h-10 items-center gap-2 border px-4 text-sm font-bold",
               filtro === valor
@@ -183,7 +299,7 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
               key={valor}
               type="button"
               aria-pressed={subfiltro === valor}
-              onClick={() => setSubfiltro(valor)}
+              onClick={() => filtrar(() => setSubfiltro(valor))}
               className={cn(
                 "inline-flex min-h-9 items-center gap-2 border px-3 text-sm font-bold",
                 subfiltro === valor
@@ -202,16 +318,18 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
 
       {visiveis.length === 0 && (
         <p className="border border-dashed border-grafite/20 px-6 py-10 text-center text-cinza">
-          {subfiltro !== "todas"
-            ? VAZIO_POR_SITUACAO[subfiltro]
-            : filtro === "abertas"
-              ? "Nenhum pedido em aberto."
-              : "Nenhum pedido aqui."}
+          {busca.trim()
+            ? "Nenhum pedido encontrado com essa busca neste período."
+            : subfiltro !== "todas"
+              ? VAZIO_POR_SITUACAO[subfiltro]
+              : filtro === "abertas"
+                ? "Nenhum pedido em aberto neste período."
+                : "Nenhum pedido neste período."}
         </p>
       )}
 
       <ul className="space-y-3">
-        {visiveis.map((encomenda) => {
+        {daPagina.map((encomenda) => {
           const expandida = aberta === encomenda.id;
           return (
             <li key={encomenda.id} className="border border-grafite/10 bg-white">
@@ -301,6 +419,36 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
           );
         })}
       </ul>
+
+      {visiveis.length > POR_PAGINA && (
+        <nav aria-label="Páginas de pedidos" className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-cinza">
+            {(paginaAtual - 1) * POR_PAGINA + 1}–{Math.min(paginaAtual * POR_PAGINA, visiveis.length)} de{" "}
+            {visiveis.length} pedidos
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => irParaPagina(paginaAtual - 1)}
+              disabled={paginaAtual === 1}
+              className="inline-flex min-h-10 items-center border border-grafite/20 bg-white px-4 text-sm font-bold hover:border-grafite disabled:opacity-40"
+            >
+              ← Anterior
+            </button>
+            <span className="px-2 font-mono text-sm" aria-live="polite">
+              {paginaAtual} / {totalDePaginas}
+            </span>
+            <button
+              type="button"
+              onClick={() => irParaPagina(paginaAtual + 1)}
+              disabled={paginaAtual === totalDePaginas}
+              className="inline-flex min-h-10 items-center border border-grafite/20 bg-white px-4 text-sm font-bold hover:border-grafite disabled:opacity-40"
+            >
+              Próxima →
+            </button>
+          </div>
+        </nav>
+      )}
     </>
   );
 }
