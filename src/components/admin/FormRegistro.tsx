@@ -57,7 +57,9 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
     youtubeUrl: registro?.youtubeUrl ?? rascunho?.youtubeUrl ?? "",
     tiktokUrl: registro?.tiktokUrl ?? rascunho?.tiktokUrl ?? "",
     creationSlug: registro?.creationSlug ?? rascunho?.creationSlug ?? "",
-    status: registro?.status ?? ("rascunho" as StatusDoRegistro),
+    // Vídeos movidos de uma criação já estavam no ar: o registro nasce publicado
+    // para eles não sumirem da página do produto.
+    status: registro?.status ?? ((rascunho?.migrarVideosDe ? "publicado" : "rascunho") as StatusDoRegistro),
     images: registro?.images ?? ([] as ImagemCriacao[]),
   };
 
@@ -267,6 +269,14 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
           ))}
         </select>
       </Campo>
+
+      {status === "rascunho" && creationSlug && (youtubeUrl.trim() || tiktokUrl.trim()) && (
+        <p role="status" className="border-l-2 border-laranja bg-white px-4 py-3 text-sm">
+          <strong>Atenção:</strong> em rascunho, os vídeos deste registro não aparecem na página de{" "}
+          <strong>{criacaoEscolhida?.title ?? creationSlug}</strong> nem no Laboratório.
+          {rascunho?.migrarVideosDe && " Eles estavam no ar; publique para que continuem aparecendo."}
+        </p>
+      )}
 
       {erro && (
         <p role="alert" className="border-l-2 border-red-700 bg-red-50 px-4 py-3 text-sm text-red-800">
