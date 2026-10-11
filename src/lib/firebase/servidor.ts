@@ -1,13 +1,16 @@
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
   getDocs,
   getFirestore,
   query,
+  serverTimestamp,
   where,
 } from "firebase/firestore/lite";
 import type { Criacao } from "@/types/criacao";
+import type { CamposEncomenda, FotoReferencia } from "@/types/encomenda";
 import { getFirebaseApp } from "./client";
 import { COLECAO_CRIACOES, docParaCriacao, type CriacaoDoc } from "./conversao";
 
@@ -45,6 +48,24 @@ export async function lerCriacoesPublicas(): Promise<Criacao[]> {
   return resultado.docs
     .map((documento) => docParaCriacao(documento.id, documento.data() as CriacaoDoc))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/**
+ * Grava uma encomenda já validada. As regras só aceitam a criação com a
+ * chave do servidor (ENCOMENDAS_CHAVE), igual à guardada em privado/servidor,
+ * documento que ninguém de fora lê; gravar direto no banco é recusado.
+ */
+export async function gravarEncomenda(
+  dados: CamposEncomenda & { fotos: FotoReferencia[] },
+  chave: string,
+): Promise<void> {
+  await addDoc(collection(db(), "encomendas"), {
+    ...dados,
+    status: "nova",
+    chave,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function lerCriacaoPublica(slug: string): Promise<Criacao | null> {

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { assinar, credenciaisCloudinary, parametrosDeEnvio } from "@/lib/servidor/cloudinary";
 import { verificarAdmin } from "@/lib/servidor/verificar-admin";
 
 /**
@@ -11,24 +11,17 @@ export async function POST(request: Request) {
     return Response.json({ erro: "Não autorizado." }, { status: 401 });
   }
 
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  if (!cloudName || !apiKey || !apiSecret) {
+  const credenciais = credenciaisCloudinary();
+  if (!credenciais) {
     return Response.json({ erro: "Cloudinary não configurado." }, { status: 503 });
   }
 
   // Parâmetros assinados: o Cloudinary recusa o envio se algum for alterado.
-  const parametros: Record<string, string> = {
-    allowed_formats: "jpg,jpeg,png,webp,avif,heic",
-    folder: "engenhices/criacoes",
-    timestamp: String(Math.floor(Date.now() / 1000)),
-  };
-  const texto = Object.keys(parametros)
-    .sort()
-    .map((chave) => `${chave}=${parametros[chave]}`)
-    .join("&");
-  const signature = createHash("sha1").update(texto + apiSecret).digest("hex");
-
-  return Response.json({ cloudName, apiKey, signature, parametros });
+  const parametros = parametrosDeEnvio("engenhices/criacoes");
+  return Response.json({
+    cloudName: credenciais.cloudName,
+    apiKey: credenciais.apiKey,
+    signature: assinar(parametros, credenciais.apiSecret),
+    parametros,
+  });
 }

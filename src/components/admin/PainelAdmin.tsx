@@ -7,12 +7,14 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
   codigoDoErro,
   entrarComGoogle,
+  listarEncomendas,
   listarTodasAsCriacoes,
   observarUsuario,
   sair,
 } from "@/lib/firebase/painel";
 import { CATEGORIAS, type Criacao } from "@/types/criacao";
 import { FormCriacao } from "./FormCriacao";
+import { ListaEncomendas } from "./ListaEncomendas";
 
 type Estado =
   | { tipo: "carregando" }
@@ -53,11 +55,17 @@ function Painel() {
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
   const [edicao, setEdicao] = useState<Edicao>(null);
   const [erroLogin, setErroLogin] = useState<string | null>(null);
+  const [aba, setAba] = useState<"criacoes" | "encomendas">("criacoes");
+  const [novas, setNovas] = useState(0);
 
   const carregar = useCallback(async (usuario: User) => {
     try {
       const criacoes = await listarTodasAsCriacoes();
       setEstado({ tipo: "pronto", usuario, criacoes });
+      // Contagem para o selo da aba; se as regras ainda não liberam, fica zero.
+      listarEncomendas()
+        .then((lista) => setNovas(lista.filter((item) => item.status === "nova").length))
+        .catch(() => setNovas(0));
     } catch (erro) {
       setEstado(
         codigoDoErro(erro) === "permission-denied"
@@ -168,9 +176,50 @@ function Painel() {
     );
   }
 
+  const abas = (
+    <div role="tablist" aria-label="Seções do painel" className="mb-8 flex gap-1 border-b border-grafite/10">
+      {(
+        [
+          ["criacoes", "Criações", 0],
+          ["encomendas", "Encomendas", novas],
+        ] as const
+      ).map(([valor, nome, contagem]) => (
+        <button
+          key={valor}
+          type="button"
+          role="tab"
+          aria-selected={aba === valor}
+          onClick={() => setAba(valor)}
+          className={`-mb-px flex min-h-11 items-center gap-2 border-b-2 px-4 text-sm font-bold ${
+            aba === valor ? "border-laranja text-grafite" : "border-transparent text-cinza hover:text-grafite"
+          }`}
+        >
+          {nome}
+          {contagem > 0 && (
+            <span className="bg-laranja px-1.5 font-mono text-xs text-grafite">
+              {contagem}
+              <span className="sr-only"> {contagem === 1 ? "nova" : "novas"}</span>
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (aba === "encomendas") {
+    return (
+      <>
+        {barra}
+        {abas}
+        <ListaEncomendas onContagem={setNovas} />
+      </>
+    );
+  }
+
   return (
     <>
       {barra}
+      {abas}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-extrabold">Criações</h2>

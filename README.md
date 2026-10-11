@@ -91,6 +91,15 @@ Para liberar o administrador: entre em `/admin`, copie o UID exibido, troque `UI
 em `firestore.rules` e publique as regras (console do Firebase → Firestore → Regras).
 Alterações feitas no painel aparecem no site em até alguns minutos (cache de 1 min).
 
+## Encomendas
+
+O formulário de `/encomendas` envia para `/api/encomendas`, que valida os campos, aplica
+proteções contra robôs (campo-armadilha, tempo mínimo de preenchimento e limite por IP),
+envia as fotos de referência ao Cloudinary e grava na coleção `encomendas`. As regras só
+aceitam encomendas com a chave do servidor (`ENCOMENDAS_CHAVE`), igual ao campo `chave` do
+documento `privado/servidor` do Firestore, que ninguém lê de fora. Os pedidos aparecem na aba
+**Encomendas** do `/admin`.
+
 ## Implantação na Vercel
 
 O projeto é compatível com a Vercel sem configuração extra:

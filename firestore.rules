@@ -50,7 +50,38 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Todo o resto fica fechado.
+    function textoEntre(valor, minimo, maximo) {
+      return valor is string && valor.size() >= minimo && valor.size() <= maximo;
+    }
+
+    // Pedidos de orçamento. Só o servidor do site cria (ele envia a chave
+    // guardada em privado/servidor, documento que ninguém lê de fora; o get()
+    // das regras enxerga). Só o admin lê, muda a situação ou apaga.
+    match /encomendas/{id} {
+      allow create: if request.resource.data.keys().hasOnly([
+            'nome', 'contato', 'descricao', 'finalidade', 'medidas', 'observacoes',
+            'fotos', 'status', 'chave', 'createdAt', 'updatedAt'
+          ])
+        && request.resource.data.chave
+          == get(/databases/$(database)/documents/privado/servidor).data.chave
+        && textoEntre(request.resource.data.nome, 2, 100)
+        && textoEntre(request.resource.data.contato, 5, 150)
+        && textoEntre(request.resource.data.descricao, 20, 3000)
+        && textoEntre(request.resource.data.finalidade, 3, 500)
+        && textoEntre(request.resource.data.medidas, 0, 300)
+        && textoEntre(request.resource.data.observacoes, 0, 1500)
+        && request.resource.data.fotos is list && request.resource.data.fotos.size() <= 3
+        && request.resource.data.status == 'nova'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['nova', 'em-analise', 'orcamento-enviado', 'concluida', 'recusada']
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // Todo o resto fica fechado (inclusive privado/servidor).
     match /{document=**} {
       allow read, write: if false;
     }

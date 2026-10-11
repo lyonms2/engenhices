@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FormEncomenda } from "@/components/encomendas/FormEncomenda";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -9,21 +10,6 @@ export const metadata: Metadata = {
     "Peças e soluções personalizadas: envie sua ideia, analisamos a viabilidade e preparamos um orçamento.",
   alternates: { canonical: "/encomendas" },
 };
-
-/**
- * Campos previstos para o formulário de solicitação (etapa futura, gravando
- * na coleção `encomendas` do Firestore e as fotos no Storage). Por enquanto
- * são só apresentados, sem campos de entrada nem envio.
- */
-const camposPrevistos = [
-  { nome: "Nome", detalhe: "Como podemos te chamar." },
-  { nome: "E-mail ou contato", detalhe: "Onde respondemos com a análise e o orçamento." },
-  { nome: "Descrição da necessidade", detalhe: "O que você precisa, com suas palavras." },
-  { nome: "Finalidade da peça", detalhe: "Onde e como ela vai ser usada: isso define material e resistência." },
-  { nome: "Medidas aproximadas", detalhe: "Comprimento, largura e altura, mesmo que estimadas." },
-  { nome: "Fotos de referência", detalhe: "Da peça quebrada, do lugar onde vai encaixar ou de algo parecido." },
-  { nome: "Observações", detalhe: "Prazo desejado, cor, quantidade ou qualquer outro detalhe." },
-] as const;
 
 const etapas = [
   { titulo: "Você descreve", texto: "Conta o que precisa, com medidas e fotos de referência." },
@@ -61,35 +47,34 @@ export default function EncomendasPage() {
         </ol>
       </Section>
 
-      <Section tom="papel" labelledBy="pedido-titulo">
+      <Section tom="papel" labelledBy="pedido-titulo" id="pedido">
         <div className="grid gap-12 lg:grid-cols-12">
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-4">
             <SectionHeading
               id="pedido-titulo"
               eyebrow="Seu pedido"
-              title="O que vamos perguntar."
-              description="Estas são as informações que o formulário de solicitação vai pedir. Separá-las desde já agiliza a análise."
+              title="Conte sua ideia."
+              description="Quanto mais detalhes, mais rápida a análise. Medidas e fotos ajudam muito, mesmo que aproximadas."
             />
-            <p className="mt-8 border-l-2 border-laranja bg-branco px-4 py-4 text-sm leading-relaxed">
-              <strong className="font-bold">O formulário ainda não está no ar.</strong> O
-              recebimento de solicitações será aberto em breve, junto com um canal de contato
-              oficial.
-            </p>
+            <ul className="mt-8 space-y-3 text-sm text-cinza">
+              <li className="flex gap-3">
+                <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 bg-laranja" />
+                Enviar o pedido não gera nenhum compromisso nem cobrança.
+              </li>
+              <li className="flex gap-3">
+                <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 bg-laranja" />
+                Respondemos pelo e-mail ou WhatsApp que você informar.
+              </li>
+              <li className="flex gap-3">
+                <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 bg-laranja" />
+                Seus dados são usados só para responder a este pedido.
+              </li>
+            </ul>
           </div>
 
-          <ul className="divide-y divide-grafite/10 border-y border-grafite/10 lg:col-span-7">
-            {camposPrevistos.map((campo, indice) => (
-              <li key={campo.nome} className="grid grid-cols-[2.5rem_1fr] gap-4 py-5">
-                <span aria-hidden="true" className="pt-0.5 font-mono text-xs text-cinza">
-                  {String(indice + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <p className="font-bold">{campo.nome}</p>
-                  <p className="mt-1 text-sm text-cinza">{campo.detalhe}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="lg:col-span-8">
+            <FormEncomenda />
+          </div>
         </div>
       </Section>
     </>

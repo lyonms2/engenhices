@@ -27,8 +27,8 @@ export function EncomendasCta() {
               </p>
             </div>
             <div className="lg:col-span-4 lg:flex lg:justify-end">
-              <ButtonLink href="/encomendas" comSeta>
-                Saiba como encomendar
+              <ButtonLink href="/encomendas#pedido" comSeta>
+                Pedir um orçamento
               </ButtonLink>
             </div>
           </div>

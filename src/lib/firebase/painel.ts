@@ -17,8 +17,10 @@ import {
   getFirestore,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 import type { Criacao } from "@/types/criacao";
+import type { Encomenda, StatusEncomenda } from "@/types/encomenda";
 import { getFirebaseApp } from "./client";
 import { COLECAO_CRIACOES, docParaCriacao, type CriacaoDoc } from "./conversao";
 
@@ -104,4 +106,36 @@ export async function salvarCriacao(dados: DadosCriacao, opcoes: { novo: boolean
 
 export function codigoDoErro(erro: unknown): string | undefined {
   return (erro as { code?: string } | null)?.code;
+}
+
+type EncomendaDoc = Omit<Encomenda, "id" | "createdAt" | "updatedAt"> & {
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
+  chave?: string;
+};
+
+/** Pedidos de orçamento, mais recentes primeiro. Só o administrador lê. */
+export async function listarEncomendas(): Promise<Encomenda[]> {
+  const resultado = await getDocs(collection(getFirestore(app()), "encomendas"));
+  return resultado.docs
+    .map((documento) => {
+      // A chave do servidor fica no documento, mas não interessa ao painel.
+      const { chave: _chave, createdAt, updatedAt, ...dados } = documento.data() as EncomendaDoc;
+      void _chave;
+      return {
+        ...dados,
+        id: documento.id,
+        fotos: dados.fotos ?? [],
+        createdAt: createdAt?.toDate().toISOString() ?? new Date(0).toISOString(),
+        updatedAt: updatedAt?.toDate().toISOString() ?? new Date(0).toISOString(),
+      };
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function mudarStatusEncomenda(id: string, status: StatusEncomenda) {
+  await updateDoc(doc(getFirestore(app()), "encomendas", id), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
 }
