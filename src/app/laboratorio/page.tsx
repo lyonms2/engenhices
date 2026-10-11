@@ -1,61 +1,59 @@
 import type { Metadata } from "next";
-import { FormatoLabCard } from "@/components/laboratorio/FormatoLabCard";
+import { ListaDeRegistros } from "@/components/laboratorio/ListaDeRegistros";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { formatosLab } from "@/data/laboratorio-demo";
+import { getRegistros } from "@/lib/laboratorio";
+import { DESCRICAO_DOS_TIPOS, TIPOS_DE_REGISTRO, type TipoDeRegistro } from "@/types/laboratorio";
 
 export const metadata: Metadata = {
   title: "Laboratório",
   description:
-    "Engenhices Lab: experimentos, protótipos, testes e bastidores dos projetos, em vídeos no YouTube e no TikTok.",
+    "Engenhices Lab: experimentos, protótipos, testes, erros, melhorias e resultados. O registro de como cada ideia vira produto.",
   alternates: { canonical: "/laboratorio" },
 };
 
-const pautas = [
-  { titulo: "Experimentos", texto: "Hipótese, teste e resultado, com os números que o teste produziu." },
-  { titulo: "Erros", texto: "Peças que quebraram, encaixes que não fecharam e o motivo de cada falha." },
-  { titulo: "Melhorias", texto: "O que mudou de uma revisão para a outra, e por quê." },
-  { titulo: "Resultados", texto: "A versão final em uso real, depois de passar por tudo isso." },
-] as const;
+export default async function LaboratorioPage() {
+  const registros = await getRegistros();
 
-export default function LaboratorioPage() {
   return (
     <>
       <PageHeader
         eyebrow="Engenhices Lab"
         title="Onde as ideias são postas à prova."
-        description="O Lab é o lado aberto da oficina: vídeos, experimentos, protótipos e bastidores. Mostramos o processo inteiro, inclusive o que dá errado no caminho."
+        description="O Lab documenta como uma ideia vira produto: experimentos, protótipos, testes, erros, melhorias e resultados. Inclusive o que deu errado, e o que aprendemos com isso."
       />
 
-      <Section tom="escuro" labelledBy="formatos-titulo" className="border-t border-branco/10">
+      <Section labelledBy="registros-titulo">
         <SectionHeading
-          id="formatos-titulo"
-          tom="escuro"
-          eyebrow="Formatos"
-          title="Os vídeos estão a caminho."
-          description="O canal está em preparação. Assim que os primeiros vídeos forem publicados, eles aparecem aqui."
+          id="registros-titulo"
+          eyebrow="Registros"
+          title="Diário da bancada."
+          description="Cada registro conta uma etapa. Quando ela faz parte de um produto, o registro leva até ele."
         />
-        <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {formatosLab.map((formato) => (
-            <li key={formato.id}>
-              <FormatoLabCard formato={formato} />
-            </li>
-          ))}
-        </ul>
+        <div className="mt-10">
+          {registros.length > 0 ? (
+            <ListaDeRegistros registros={registros} />
+          ) : (
+            <p className="border border-dashed border-grafite/20 px-6 py-12 text-center text-cinza">
+              Os primeiros registros estão saindo da bancada. Em breve, aqui.
+            </p>
+          )}
+        </div>
       </Section>
 
-      <Section labelledBy="pautas-titulo">
+      <Section tom="papel" labelledBy="tipos-titulo">
         <SectionHeading
-          id="pautas-titulo"
-          eyebrow="O que você vai ver"
-          title="O processo, sem cortes."
+          id="tipos-titulo"
+          eyebrow="O que documentamos"
+          title="Do primeiro esboço ao resultado."
+          description="Nem toda ideia vira produto, e nem todo teste dá certo. Por isso registramos o processo inteiro."
         />
-        <dl className="mt-12 grid gap-px border border-grafite/10 bg-grafite/10 sm:grid-cols-2">
-          {pautas.map((pauta) => (
-            <div key={pauta.titulo} className="bg-branco p-6 sm:p-8">
-              <dt className="text-xl font-extrabold">{pauta.titulo}</dt>
-              <dd className="mt-2 text-sm leading-relaxed text-cinza">{pauta.texto}</dd>
+        <dl className="mt-12 grid gap-px border border-grafite/10 bg-grafite/10 sm:grid-cols-2 lg:grid-cols-4">
+          {(Object.keys(TIPOS_DE_REGISTRO) as TipoDeRegistro[]).map((tipo) => (
+            <div key={tipo} className="bg-branco p-6">
+              <dt className="text-lg font-extrabold">{TIPOS_DE_REGISTRO[tipo]}</dt>
+              <dd className="mt-2 text-sm leading-relaxed text-cinza">{DESCRICAO_DOS_TIPOS[tipo]}</dd>
             </div>
           ))}
         </dl>

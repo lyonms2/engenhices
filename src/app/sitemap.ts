@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { mainNav, siteConfig } from "@/config/site";
 import { getCriacoes } from "@/lib/criacoes";
+import { getRegistros } from "@/lib/laboratorio";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const paginas = mainNav.map((item) => ({ url: `${siteConfig.url}${item.href === "/" ? "" : item.href}` }));
@@ -13,5 +14,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: criacao.updatedAt,
     }));
 
-  return [...paginas, ...criacoes];
+  const registros = (await getRegistros()).map((registro) => ({
+    url: `${siteConfig.url}/laboratorio/${registro.slug}`,
+    lastModified: registro.updatedAt,
+  }));
+
+  return [...paginas, ...criacoes, ...registros];
 }

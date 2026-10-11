@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   SlugEmUsoError,
   apagarCriacao,
@@ -11,6 +11,7 @@ import {
   type DadosCriacao,
 } from "@/lib/firebase/painel";
 import { gerarSlug } from "@/lib/utils";
+import { Campo, campo } from "./CampoDoFormulario";
 import { ConfirmarAcao } from "./ConfirmarAcao";
 import { GerenciadorFotos } from "./GerenciadorFotos";
 import {
@@ -20,6 +21,7 @@ import {
   type ImagemCriacao,
   type StatusCriacao,
 } from "@/types/criacao";
+import { TIPOS_DE_REGISTRO, type RegistroLab } from "@/types/laboratorio";
 
 type FormCriacaoProps = {
   /** Criação em edição; ausente ao criar uma nova. */
@@ -28,6 +30,11 @@ type FormCriacaoProps = {
   onCancelar: () => void;
   /** Chamado depois de apagar a criação em edição. */
   onApagado: () => void;
+  /** Registros do Laboratório associados a esta criação. */
+  registros: RegistroLab[];
+  /** Abre um registro novo já associado (e, se houver, com os vídeos antigos). */
+  onNovoRegistro: (criacao: Criacao, moverVideosAntigos: boolean) => void;
+  onEditarRegistro: (registro: RegistroLab) => void;
 };
 
 const STATUS: Record<StatusCriacao, string> = {
@@ -36,10 +43,16 @@ const STATUS: Record<StatusCriacao, string> = {
   arquivado: "Arquivado — fora de linha, página continua no ar",
 };
 
-const campo =
-  "mt-2 block w-full border border-grafite/20 bg-white px-3 py-2.5 text-base focus:border-grafite focus-visible:outline-2 focus-visible:outline-laranja";
 
-export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCriacaoProps) {
+export function FormCriacao({
+  criacao,
+  onSalvo,
+  onCancelar,
+  onApagado,
+  registros,
+  onNovoRegistro,
+  onEditarRegistro,
+}: FormCriacaoProps) {
   const novo = !criacao;
   const [title, setTitle] = useState(criacao?.title ?? "");
   const [slug, setSlug] = useState(criacao?.slug ?? "");
@@ -48,8 +61,10 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
   const [category, setCategory] = useState<Categoria>(criacao?.category ?? "utilidades");
   const [status, setStatus] = useState<StatusCriacao>(criacao?.status ?? "rascunho");
   const [featured, setFeatured] = useState(criacao?.featured ?? false);
-  const [youtubeUrl, setYoutubeUrl] = useState(criacao?.youtubeUrl ?? "");
-  const [tiktokUrl, setTiktokUrl] = useState(criacao?.tiktokUrl ?? "");
+  // Campos antigos de vídeo: não são mais editados aqui. Passam intactos ao
+  // salvar, até serem movidos para um registro do Laboratório.
+  const youtubeUrl = criacao?.youtubeUrl ?? "";
+  const tiktokUrl = criacao?.tiktokUrl ?? "";
   const [mercadoLivreUrl, setMercadoLivreUrl] = useState(criacao?.mercadoLivreUrl ?? "");
   const [images, setImages] = useState<ImagemCriacao[]>(criacao?.images ?? []);
   // Fotos enviadas ao Cloudinary nesta edição. Se a edição for cancelada, ou
@@ -105,15 +120,18 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
     return () => window.removeEventListener("beforeunload", avisar);
   }, [alterado, salvando]);
 
-  function cancelar() {
+  /** Sai da edição sem salvar (cancelar ou ir para um registro do Lab). */
+  function sair(depois: () => void) {
     if (alterado && !window.confirm("Descartar as alterações não salvas?")) return;
     // Descarta só o que foi enviado agora; as fotos já salvas continuam.
     const descartadas = [...enviadasNestaEdicao.current];
     if (descartadas.length > 0) {
       apagarFotos(descartadas).catch((falha) => console.warn("[admin] Fotos descartadas não apagadas:", falha));
     }
-    onCancelar();
+    depois();
   }
+
+  const cancelar = () => sair(onCancelar);
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault();
@@ -245,16 +263,72 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
       </label>
 
       <fieldset className="space-y-6 border-t border-grafite/10 pt-6">
-        <legend className="font-mono text-xs tracking-wider text-cinza uppercase">Links (opcionais)</legend>
+        <legend className="font-mono text-xs tracking-wider text-cinza uppercase">Venda (opcional)</legend>
         <Campo rotulo="Anúncio no Mercado Livre">
           <input type="url" maxLength={500} value={mercadoLivreUrl} onChange={(e) => setMercadoLivreUrl(e.target.value)} placeholder="https://" className={campo} />
         </Campo>
-        <Campo rotulo="Vídeo no YouTube">
-          <input type="url" maxLength={500} value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" className={campo} />
-        </Campo>
-        <Campo rotulo="Vídeo no TikTok">
-          <input type="url" maxLength={500} value={tiktokUrl} onChange={(e) => setTiktokUrl(e.target.value)} placeholder="https://www.tiktok.com/@…" className={campo} />
-        </Campo>
+      </fieldset>
+
+      <fieldset className="space-y-4 border-t border-grafite/10 pt-6">
+        <legend className="font-mono text-xs tracking-wider text-cinza uppercase">Laboratório e vídeos</legend>
+        <p className="text-sm text-cinza">
+          Vídeos, testes e bastidores desta criação são registros do Laboratório. Cada registro
+          associado aparece no Laboratório e aqui, na página da criação, sem cadastro duplicado.
+        </p>
+
+        {criacao && (youtubeUrl || tiktokUrl) && (
+          <div className="border-l-2 border-laranja bg-white px-4 py-3 text-sm">
+            <p className="font-bold">Vídeos no formato antigo</p>
+            <p className="mt-1 text-cinza">
+              Esta criação tem vídeos cadastrados direto nela ({[youtubeUrl && "YouTube", tiktokUrl && "TikTok"].filter(Boolean).join(" e ")}).
+              Eles continuam aparecendo no site. Mova-os para um registro do Laboratório para
+              contar a história deles.
+            </p>
+            <button
+              type="button"
+              onClick={() => sair(() => onNovoRegistro(criacao, true))}
+              className="mt-3 inline-flex min-h-10 items-center bg-laranja px-4 text-sm font-bold text-grafite hover:bg-[#ff7f22]"
+            >
+              Mover para o Laboratório
+            </button>
+          </div>
+        )}
+
+        {registros.length > 0 && (
+          <ul className="divide-y divide-grafite/10 border-y border-grafite/10">
+            {registros.map((registro) => (
+              <li key={registro.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                <span>
+                  <span className="mr-2 font-mono text-xs tracking-wider text-laranja-escuro uppercase">
+                    {TIPOS_DE_REGISTRO[registro.type]}
+                  </span>
+                  <span className="font-bold">{registro.title}</span>
+                  {registro.status === "rascunho" && <span className="ml-2 text-cinza">(rascunho)</span>}
+                  {(registro.youtubeUrl || registro.tiktokUrl) && <span className="ml-2 text-cinza">▶</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => sair(() => onEditarRegistro(registro))}
+                  className="font-bold underline-offset-4 hover:underline"
+                >
+                  Editar registro
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {criacao ? (
+          <button
+            type="button"
+            onClick={() => sair(() => onNovoRegistro(criacao, false))}
+            className="inline-flex min-h-10 items-center border border-grafite/25 px-4 text-sm font-bold hover:border-grafite"
+          >
+            Novo registro para esta criação
+          </button>
+        ) : (
+          <p className="text-sm text-cinza">Salve a criação para poder associar registros do Laboratório a ela.</p>
+        )}
       </fieldset>
 
       <GerenciadorFotos imagens={images} onChange={mudarFotos} onEnviando={setEnviandoFotos} />
@@ -307,33 +381,5 @@ export function FormCriacao({ criacao, onSalvo, onCancelar, onApagado }: FormCri
         </div>
       )}
     </form>
-  );
-}
-
-function Campo({
-  rotulo,
-  ajuda,
-  contador,
-  children,
-}: {
-  rotulo: string;
-  ajuda?: string;
-  contador?: { atual: number; maximo: number };
-  children: ReactNode;
-}) {
-  const perto = contador && contador.atual > contador.maximo * 0.9;
-  return (
-    <label className="block">
-      <span className="flex items-baseline justify-between gap-4">
-        <span className="font-bold">{rotulo}</span>
-        {contador && (
-          <span className={`font-mono text-xs ${perto ? "font-bold text-laranja-escuro" : "text-cinza"}`}>
-            {contador.atual} / {contador.maximo}
-          </span>
-        )}
-      </span>
-      {children}
-      {ajuda && <span className="mt-1.5 block text-sm text-cinza">{ajuda}</span>}
-    </label>
   );
 }

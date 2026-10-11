@@ -1,10 +1,14 @@
-import { FormatoLabCard } from "@/components/laboratorio/FormatoLabCard";
+import { RegistroCard } from "@/components/laboratorio/RegistroCard";
 import { ButtonLink } from "@/components/ui/Button";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { formatosLab } from "@/data/laboratorio-demo";
+import { getRegistrosRecentes } from "@/lib/laboratorio";
+import { TIPOS_DE_REGISTRO } from "@/types/laboratorio";
 
-export function LabSection() {
+/** Os registros mais recentes do Laboratório; sem registros, apresenta o que virá. */
+export async function LabSection() {
+  const registros = await getRegistrosRecentes(3);
+
   return (
     <Section tom="escuro" labelledBy="lab-titulo" className="bg-prancheta">
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
@@ -13,20 +17,33 @@ export function LabSection() {
           tom="escuro"
           eyebrow="02 — Engenhices Lab"
           title="O laboratório fica aberto."
-          description="Experimentos, protótipos, erros e melhorias, mostrados como acontecem. O canal está em preparação: os primeiros vídeos aparecem aqui assim que forem publicados."
+          description="Experimentos, protótipos, testes, erros e melhorias, mostrados como acontecem. É aqui que fica registrado como cada ideia vira produto."
         />
         <ButtonLink href="/laboratorio" variante="secundario" comSeta className="shrink-0">
-          Conhecer o laboratório
+          {registros.length > 0 ? "Ver todos os registros" : "Conhecer o laboratório"}
         </ButtonLink>
       </div>
 
-      <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {formatosLab.map((formato) => (
-          <li key={formato.id}>
-            <FormatoLabCard formato={formato} />
-          </li>
-        ))}
-      </ul>
+      {registros.length > 0 ? (
+        <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {registros.map((registro) => (
+            <li key={registro.id}>
+              <RegistroCard registro={registro} tom="escuro" />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="mt-12 flex flex-wrap gap-2" aria-label="Tipos de registro">
+          {Object.values(TIPOS_DE_REGISTRO).map((nome) => (
+            <li
+              key={nome}
+              className="border border-branco/15 px-3 py-2 font-mono text-xs tracking-wider text-cinza-claro uppercase"
+            >
+              {nome}
+            </li>
+          ))}
+        </ul>
+      )}
     </Section>
   );
 }

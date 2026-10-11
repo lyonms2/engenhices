@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useId, useState, type ChangeEvent } from "react";
-import { TAMANHO_MAXIMO_MB, enviarFoto } from "@/lib/cloudinary/envio";
+import { TAMANHO_MAXIMO_MB, enviarFoto, type PastaDeFotos } from "@/lib/cloudinary/envio";
 import type { ImagemCriacao } from "@/types/criacao";
 
 /** Mesmo limite das regras do Firestore. */
@@ -13,13 +13,14 @@ type GerenciadorFotosProps = {
   onChange: (imagens: ImagemCriacao[]) => void;
   /** Avisa o formulário para não salvar no meio de um envio. */
   onEnviando: (enviando: boolean) => void;
+  pasta?: PastaDeFotos;
 };
 
 /**
  * Lista de fotos de uma criação. A primeira é a capa. Cada foto exige um
  * texto alternativo, lido por leitores de tela e buscadores.
  */
-export function GerenciadorFotos({ imagens, onChange, onEnviando }: GerenciadorFotosProps) {
+export function GerenciadorFotos({ imagens, onChange, onEnviando, pasta = "criacoes" }: GerenciadorFotosProps) {
   const inputId = useId();
   const [enviando, setEnviando] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export function GerenciadorFotos({ imagens, onChange, onEnviando }: GerenciadorF
     const falhas: string[] = [];
     for (const arquivo of arquivos) {
       try {
-        novas.push({ ...(await enviarFoto(arquivo)), alt: "" });
+        novas.push({ ...(await enviarFoto(arquivo, pasta)), alt: "" });
       } catch (falha) {
         falhas.push((falha as Error).message);
       }

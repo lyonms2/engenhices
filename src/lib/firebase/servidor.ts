@@ -11,9 +11,17 @@ import {
 } from "firebase/firestore/lite";
 import { gerarCodigoDoPedido } from "@/lib/encomendas/codigo";
 import type { Criacao } from "@/types/criacao";
+import type { RegistroLab } from "@/types/laboratorio";
 import type { CamposEncomenda, FotoReferencia } from "@/types/encomenda";
 import { getFirebaseApp } from "./client";
-import { COLECAO_CRIACOES, docParaCriacao, type CriacaoDoc } from "./conversao";
+import {
+  COLECAO_CRIACOES,
+  COLECAO_LABORATORIO,
+  docParaCriacao,
+  docParaRegistro,
+  type CriacaoDoc,
+  type RegistroLabDoc,
+} from "./conversao";
 
 /**
  * Leituras públicas feitas no servidor (Firestore Lite, sem conexão em tempo
@@ -89,6 +97,25 @@ export async function lerCriacaoPublica(slug: string): Promise<Criacao | null> {
   } catch (erro) {
     // Rascunho ou documento inexistente: as regras negam a leitura.
     if ((erro as { code?: string }).code === "permission-denied") return null;
+    throw erro;
+  }
+}
+
+/** Registros publicados do Laboratório, mais recentes primeiro. */
+export async function lerRegistrosPublicos(): Promise<RegistroLab[]> {
+  try {
+    const resultado = await getDocs(
+      query(collection(db(), COLECAO_LABORATORIO), where("status", "==", "publicado")),
+    );
+    return resultado.docs
+      .map((documento) => docParaRegistro(documento.id, documento.data() as RegistroLabDoc))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  } catch (erro) {
+    // Regras do Laboratório ainda não publicadas: a página fica vazia, sem quebrar o build.
+    if ((erro as { code?: string }).code === "permission-denied") {
+      console.warn("[laboratorio] Firestore recusou a leitura pública; publique o firestore.rules.");
+      return [];
+    }
     throw erro;
   }
 }

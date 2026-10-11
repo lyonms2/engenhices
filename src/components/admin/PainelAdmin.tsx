@@ -7,12 +7,16 @@ import {
   codigoDoErro,
   entrarComGoogle,
   listarEncomendas,
+  listarRegistros,
   listarTodasAsCriacoes,
   observarUsuario,
   sair,
 } from "@/lib/firebase/painel";
 import type { Criacao } from "@/types/criacao";
+import type { RegistroLab } from "@/types/laboratorio";
 import { FormCriacao } from "./FormCriacao";
+import { FormRegistro, type RascunhoDeRegistro } from "./FormRegistro";
+import { ListaRegistros } from "./ListaRegistros";
 import { ListaCriacoes } from "./ListaCriacoes";
 import { LimpezaFotos } from "./LimpezaFotos";
 import { ListaEncomendas } from "./ListaEncomendas";
@@ -22,10 +26,22 @@ type Estado =
   | { tipo: "deslogado" }
   | { tipo: "sem-permissao"; usuario: User }
   | { tipo: "erro"; usuario: User }
-  | { tipo: "pronto"; usuario: User; criacoes: Criacao[] };
+  | {
+      tipo: "pronto";
+      usuario: User;
+      criacoes: Criacao[];
+      registros: RegistroLab[];
+      /** As regras do Laboratório ainda não foram publicadas. */
+      registrosIndisponiveis: boolean;
+    };
 
-/** Edição em andamento: null = lista; "nova" = formulário vazio. */
-type Edicao = null | "nova" | Criacao;
+/** Edição em andamento; null = listas. Sem `criacao`/`registro` = item novo. */
+type Edicao =
+  | null
+  | { tipo: "criacao"; criacao?: Criacao }
+  | { tipo: "registro"; registro?: RegistroLab; rascunho?: RascunhoDeRegistro };
+
+type Aba = "criacoes" | "laboratorio" | "encomendas" | "fotos";
 
 const ERROS_DE_LOGIN: Record<string, string> = {
   "auth/operation-not-allowed":
@@ -54,13 +70,22 @@ function Painel() {
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
   const [edicao, setEdicao] = useState<Edicao>(null);
   const [erroLogin, setErroLogin] = useState<string | null>(null);
-  const [aba, setAba] = useState<"criacoes" | "encomendas" | "fotos">("criacoes");
+  const [aba, setAba] = useState<Aba>("criacoes");
   const [novas, setNovas] = useState(0);
 
   const carregar = useCallback(async (usuario: User) => {
     try {
       const criacoes = await listarTodasAsCriacoes();
-      setEstado({ tipo: "pronto", usuario, criacoes });
+      // O Laboratório não pode derrubar o painel se as regras dele ainda não
+      // foram publicadas: a aba avisa e o resto funciona.
+      const registros = await listarRegistros().catch(() => null);
+      setEstado({
+        tipo: "pronto",
+        usuario,
+        criacoes,
+        registros: registros ?? [],
+        registrosIndisponiveis: registros === null,
+      });
       // Contagem para o selo da aba; se as regras ainda não liberam, fica zero.
       listarEncomendas()
         .then((lista) => setNovas(lista.filter((item) => item.status === "nova").length))
@@ -157,28 +182,63 @@ function Painel() {
     );
   }
 
-  const editor = edicao && (
-        <div className="max-w-2xl">
-          <FormCriacao
-            criacao={edicao === "nova" ? undefined : edicao}
-            onCancelar={() => setEdicao(null)}
-            onApagado={() => {
-              setEdicao(null);
-              void carregar(estado.usuario);
-            }}
-            onSalvo={() => {
-              setEdicao(null);
-              void carregar(estado.usuario);
-            }}
-          />
-        </div>
-  );
+  const recarregar = () => {
+    setEdicao(null);
+    void carregar(estado.usuario);
+  };
+
+  function abrirNovoRegistro(criacao: Criacao, moverVideosAntigos: boolean) {
+    setAba("laboratorio");
+    setEdicao({
+      tipo: "registro",
+      rascunho: moverVideosAntigos
+        ? {
+            title: `${criacao.title} em uso`,
+            type: "resultado",
+            creationSlug: criacao.slug,
+            youtubeUrl: criacao.youtubeUrl,
+            tiktokUrl: criacao.tiktokUrl,
+            migrarVideosDe: criacao.slug,
+          }
+        : { creationSlug: criacao.slug },
+    });
+  }
+
+  const editor =
+    edicao?.tipo === "criacao" ? (
+      <div className="max-w-2xl">
+        <FormCriacao
+          criacao={edicao.criacao}
+          registros={estado.registros.filter((registro) => registro.creationSlug === edicao.criacao?.slug)}
+          onNovoRegistro={abrirNovoRegistro}
+          onEditarRegistro={(registro) => {
+            setAba("laboratorio");
+            setEdicao({ tipo: "registro", registro });
+          }}
+          onCancelar={() => setEdicao(null)}
+          onApagado={recarregar}
+          onSalvo={recarregar}
+        />
+      </div>
+    ) : edicao?.tipo === "registro" ? (
+      <div className="max-w-2xl">
+        <FormRegistro
+          registro={edicao.registro}
+          rascunho={edicao.rascunho}
+          criacoes={estado.criacoes}
+          onCancelar={() => setEdicao(null)}
+          onApagado={recarregar}
+          onSalvo={recarregar}
+        />
+      </div>
+    ) : null;
 
   const abas = (
-    <div role="tablist" aria-label="Seções do painel" className="mb-8 flex gap-1 border-b border-grafite/10">
+    <div role="tablist" aria-label="Seções do painel" className="mb-8 flex flex-wrap gap-1 border-b border-grafite/10">
       {(
         [
           ["criacoes", "Criações", 0],
+          ["laboratorio", "Laboratório", 0],
           ["encomendas", "Encomendas", novas],
           ["fotos", "Fotos", 0],
         ] as const
@@ -205,45 +265,75 @@ function Painel() {
     </div>
   );
 
-  if (aba === "fotos") {
-    return (
-      <>
-        {barra}
-        {abas}
-        <LimpezaFotos />
-      </>
-    );
-  }
-
-  if (aba === "encomendas") {
-    return (
-      <>
-        {barra}
-        {abas}
-        <ListaEncomendas onContagem={setNovas} />
-      </>
-    );
-  }
-
   return (
     <>
       {barra}
       {editor}
-      {/* Escondida, não desmontada: busca e filtros sobrevivem à edição. */}
+      {/* Escondido, não desmontado: busca e filtros sobrevivem à edição. */}
       <div hidden={Boolean(edicao)}>
         {abas}
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold">Criações</h2>
-            <p className="mt-1 text-sm text-cinza">O site é atualizado assim que você salva.</p>
-          </div>
-          <button type="button" onClick={() => setEdicao("nova")} className={botaoPrimario}>
-            Nova criação
-          </button>
-        </div>
-        <ListaCriacoes criacoes={estado.criacoes} onEditar={setEdicao} />
+
+        {aba === "criacoes" && (
+          <>
+            <Cabecalho
+              titulo="Criações"
+              descricao="O site é atualizado assim que você salva."
+              acao="Nova criação"
+              onAcao={() => setEdicao({ tipo: "criacao" })}
+            />
+            <ListaCriacoes criacoes={estado.criacoes} onEditar={(criacao) => setEdicao({ tipo: "criacao", criacao })} />
+          </>
+        )}
+
+        {aba === "laboratorio" &&
+          (estado.registrosIndisponiveis ? (
+            <Aviso titulo="O Laboratório ainda não está liberado">
+              Publique o firestore.rules atualizado (Firestore → Regras) e recarregue a página.
+            </Aviso>
+          ) : (
+            <>
+              <Cabecalho
+                titulo="Laboratório"
+                descricao="Experimentos, protótipos, testes, erros, melhorias, resultados, bastidores e projetos."
+                acao="Novo registro"
+                onAcao={() => setEdicao({ tipo: "registro" })}
+              />
+              <ListaRegistros
+                registros={estado.registros}
+                criacoes={estado.criacoes}
+                onEditar={(registro) => setEdicao({ tipo: "registro", registro })}
+              />
+            </>
+          ))}
+
+        {aba === "encomendas" && <ListaEncomendas onContagem={setNovas} />}
+        {aba === "fotos" && <LimpezaFotos />}
       </div>
     </>
+  );
+}
+
+function Cabecalho({
+  titulo,
+  descricao,
+  acao,
+  onAcao,
+}: {
+  titulo: string;
+  descricao: string;
+  acao: string;
+  onAcao: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h2 className="text-2xl font-extrabold">{titulo}</h2>
+        <p className="mt-1 text-sm text-cinza">{descricao}</p>
+      </div>
+      <button type="button" onClick={onAcao} className={botaoPrimario}>
+        {acao}
+      </button>
+    </div>
   );
 }
 

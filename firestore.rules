@@ -50,6 +50,38 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    function registroValido(d, slug) {
+      return d.keys().hasOnly([
+          'title', 'slug', 'type', 'summary', 'body', 'images', 'youtubeUrl', 'tiktokUrl',
+          'creationSlug', 'status', 'createdAt', 'updatedAt'
+        ])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 120
+        && d.slug == slug && slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && slug.size() <= 80
+        && d.type in ['experimento', 'prototipo', 'teste', 'erro', 'melhoria', 'resultado', 'bastidores', 'projeto']
+        && d.summary is string && d.summary.size() <= 300
+        && d.body is string && d.body.size() <= 10000
+        && d.images is list && d.images.size() <= 12
+        && urlOuNulo(d.youtubeUrl)
+        && urlOuNulo(d.tiktokUrl)
+        && (d.creationSlug == null || (d.creationSlug is string && d.creationSlug.size() <= 80))
+        && d.status in ['rascunho', 'publicado']
+        && d.createdAt is timestamp
+        && d.updatedAt == request.time;
+    }
+
+    // Registros do Laboratório: o id do documento é o slug. Única fonte de
+    // vídeos do site; a página de uma criação mostra os registros associados.
+    match /laboratorio/{slug} {
+      allow read: if isAdmin() || resource.data.status == 'publicado';
+      allow create: if isAdmin()
+        && registroValido(request.resource.data, slug)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin()
+        && registroValido(request.resource.data, slug)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
     function textoEntre(valor, minimo, maximo) {
       return valor is string && valor.size() >= minimo && valor.size() <= maximo;
     }

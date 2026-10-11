@@ -16,8 +16,12 @@ export async function POST(request: Request) {
     return Response.json({ erro: "Cloudinary não configurado." }, { status: 503 });
   }
 
+  // Só pastas conhecidas; qualquer outro valor cai em criações.
+  const corpo = (await request.json().catch(() => ({}))) as { pasta?: unknown };
+  const pasta = corpo.pasta === "laboratorio" ? "laboratorio" : "criacoes";
+
   // Parâmetros assinados: o Cloudinary recusa o envio se algum for alterado.
-  const parametros = parametrosDeEnvio("engenhices/criacoes");
+  const parametros = parametrosDeEnvio(`engenhices/${pasta}`);
   return Response.json({
     cloudName: credenciais.cloudName,
     apiKey: credenciais.apiKey,

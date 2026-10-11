@@ -71,3 +71,21 @@ export function analisarTikTok(url: string): VideoIncorporado | null {
     return null;
   }
 }
+
+/**
+ * Identidade de um vídeo, para não mostrar o mesmo vídeo duas vezes quando
+ * ele chega por caminhos diferentes (links com parâmetros, youtu.be etc.).
+ */
+export function chaveDoVideo(url: string): string {
+  const youtube = analisarYouTube(url)?.embedUrl.split("/").pop();
+  if (youtube) return `youtube:${youtube}`;
+  const tiktok = analisarTikTok(url)?.embedUrl.split("/").pop();
+  if (tiktok) return `tiktok:${tiktok}`;
+  return url.trim();
+}
+
+/** Miniatura pública de um vídeo do YouTube, para cartões sem foto. */
+export function miniaturaDoYouTube(url: string): string | null {
+  const id = analisarYouTube(url)?.embedUrl.split("/").pop();
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+}

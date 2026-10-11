@@ -22,8 +22,16 @@ import {
 } from "firebase/firestore";
 import type { Criacao } from "@/types/criacao";
 import type { Encomenda, StatusEncomenda } from "@/types/encomenda";
+import type { RegistroLab } from "@/types/laboratorio";
 import { getFirebaseApp } from "./client";
-import { COLECAO_CRIACOES, docParaCriacao, type CriacaoDoc } from "./conversao";
+import {
+  COLECAO_CRIACOES,
+  COLECAO_LABORATORIO,
+  docParaCriacao,
+  docParaRegistro,
+  type CriacaoDoc,
+  type RegistroLabDoc,
+} from "./conversao";
 
 /**
  * Operações do painel /admin, executadas no navegador com o login do dono.
@@ -202,14 +210,19 @@ export type ResultadoDaVerificacao = {
 };
 
 /**
- * Procura fotos do Cloudinary que nenhuma criação ou pedido usa. Se a
- * leitura de criações ou pedidos falhar, a função falha também: uma lista
+ * Procura fotos do Cloudinary que nenhuma criação, registro do Laboratório
+ * ou pedido usa. Se alguma dessas leituras falhar, a função falha também: uma lista
  * "em uso" incompleta faria fotos em uso parecerem sobras.
  */
 export async function buscarFotosNaoUsadas(): Promise<ResultadoDaVerificacao> {
-  const [criacoes, encomendas] = await Promise.all([listarTodasAsCriacoes(), listarEncomendas()]);
+  const [criacoes, encomendas, registros] = await Promise.all([
+    listarTodasAsCriacoes(),
+    listarEncomendas(),
+    listarRegistros(),
+  ]);
   const usadas = [
     ...criacoes.flatMap((criacao) => criacao.images.map((imagem) => imagem.src)),
+    ...registros.flatMap((registro) => registro.images.map((imagem) => imagem.src)),
     ...encomendas.flatMap((encomenda) => encomenda.fotos.map((foto) => foto.src)),
   ];
 
@@ -231,4 +244,50 @@ export async function apagarFotosEmLotes(urls: string[]) {
   for (let inicio = 0; inicio < urls.length; inicio += 50) {
     await apagarFotos(urls.slice(inicio, inicio + 50));
   }
+}
+
+/** Todos os registros do Laboratório, inclusive rascunhos. Só o admin lê. */
+export async function listarRegistros(): Promise<RegistroLab[]> {
+  const resultado = await getDocs(collection(getFirestore(app()), COLECAO_LABORATORIO));
+  return resultado.docs
+    .map((documento) => docParaRegistro(documento.id, documento.data() as RegistroLabDoc))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export type DadosRegistro = Omit<RegistroLab, "id" | "createdAt" | "updatedAt">;
+
+/** Cria ou atualiza um registro. O slug é o id e não muda depois de criado. */
+export async function salvarRegistro(dados: DadosRegistro, opcoes: { novo: boolean; createdAt?: string }) {
+  const referencia = doc(getFirestore(app()), COLECAO_LABORATORIO, dados.slug);
+
+  if (opcoes.novo && (await getDoc(referencia)).exists()) {
+    throw new SlugEmUsoError(`Já existe um registro com o endereço "${dados.slug}".`);
+  }
+
+  await setDoc(referencia, {
+    ...dados,
+    createdAt:
+      opcoes.novo || !opcoes.createdAt
+        ? serverTimestamp()
+        : Timestamp.fromDate(new Date(opcoes.createdAt)),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Apaga um registro e as fotos dele (fotos primeiro, como nas criações). */
+export async function apagarRegistro(registro: Pick<RegistroLab, "slug" | "images">) {
+  await apagarFotos(registro.images.map((imagem) => imagem.src));
+  await deleteDoc(doc(getFirestore(app()), COLECAO_LABORATORIO, registro.slug));
+}
+
+/**
+ * Esvazia os campos antigos de vídeo de uma criação, depois que os vídeos
+ * foram movidos para um registro do Laboratório.
+ */
+export async function limparVideosDaCriacao(slug: string) {
+  await updateDoc(doc(getFirestore(app()), COLECAO_CRIACOES, slug), {
+    youtubeUrl: null,
+    tiktokUrl: null,
+    updatedAt: serverTimestamp(),
+  });
 }

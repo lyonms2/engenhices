@@ -13,19 +13,29 @@ type Assinatura = {
   parametros: Record<string, string>;
 };
 
+/** Pasta do Cloudinary onde a foto fica, conforme o conteúdo. */
+export type PastaDeFotos = "criacoes" | "laboratorio";
+
 /**
  * Envia uma foto ao Cloudinary: pede a assinatura ao servidor (que confere o
  * login do administrador) e manda o arquivo direto do navegador.
  * Devolve a imagem sem texto alternativo, que é preenchido no formulário.
  */
-export async function enviarFoto(arquivo: File): Promise<Omit<ImagemCriacao, "alt">> {
+export async function enviarFoto(
+  arquivo: File,
+  pasta: PastaDeFotos = "criacoes",
+): Promise<Omit<ImagemCriacao, "alt">> {
   if (arquivo.size > TAMANHO_MAXIMO_MB * 1024 * 1024) {
     throw new Error(`"${arquivo.name}" passa de ${TAMANHO_MAXIMO_MB} MB.`);
   }
 
   const resposta = await fetch("/api/fotos/assinatura", {
     method: "POST",
-    headers: { Authorization: `Bearer ${await obterTokenDeId()}` },
+    headers: {
+      Authorization: `Bearer ${await obterTokenDeId()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ pasta }),
   });
   if (!resposta.ok) {
     const { erro } = (await resposta.json().catch(() => ({}))) as { erro?: string };

@@ -3,11 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DescricaoExpansivel } from "@/components/criacoes/DescricaoExpansivel";
 import { Galeria } from "@/components/criacoes/Galeria";
-import { VideosCriacao } from "@/components/criacoes/VideosCriacao";
+import { RegistroCard } from "@/components/laboratorio/RegistroCard";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Section";
+import { SecaoVideos, videosDe, videosSemRepeticao } from "@/components/videos/SecaoVideos";
 import { getCriacaoPorSlug, getCriacoes } from "@/lib/criacoes";
+import { getRegistrosDaCriacao } from "@/lib/laboratorio";
 import { CATEGORIAS } from "@/types/criacao";
 
 /**
@@ -59,6 +61,17 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
   const { slug } = await params;
   const criacao = await getCriacaoPorSlug(slug);
   if (!criacao) notFound();
+
+  // Os vídeos vêm dos registros do Laboratório associados a esta criação.
+  // Os campos antigos de vídeo da criação ainda entram (sem repetir) até
+  // serem movidos para um registro pelo painel.
+  const registros = await getRegistrosDaCriacao(criacao.slug);
+  const videos = videosSemRepeticao([
+    ...registros.flatMap((registro) =>
+      videosDe(registro, { titulo: registro.title, href: `/laboratorio/${registro.slug}` }),
+    ),
+    ...videosDe(criacao),
+  ]);
 
   return (
     <article>
@@ -145,7 +158,25 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
         </div>
       </Container>
 
-      <VideosCriacao criacao={criacao} />
+      <SecaoVideos titulo="Veja funcionando" videos={videos} contexto={criacao.title} />
+
+      {registros.length > 0 && (
+        <section aria-labelledby="lab-da-criacao-titulo" className="bg-branco py-16 sm:py-20">
+          <Container>
+            <p className="font-mono text-xs tracking-[0.18em] text-laranja-escuro uppercase">Do Laboratório</p>
+            <h2 id="lab-da-criacao-titulo" className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
+              Como esta criação foi desenvolvida
+            </h2>
+            <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {registros.map((registro) => (
+                <li key={registro.id}>
+                  <RegistroCard registro={registro} />
+                </li>
+              ))}
+            </ol>
+          </Container>
+        </section>
+      )}
     </article>
   );
 }
