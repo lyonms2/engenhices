@@ -23,11 +23,16 @@ export async function getCriacoes(): Promise<Criacao[]> {
   return lerCriacoesPublicas();
 }
 
+/**
+ * Criações da página inicial: primeiro as marcadas como destaque; as vagas
+ * que sobrarem são preenchidas pelas publicadas mais recentes. Assim a home
+ * nunca diz "em breve" enquanto houver algo no catálogo.
+ */
 export async function getCriacoesEmDestaque(limite = 3): Promise<Criacao[]> {
-  const todas = await getCriacoes();
-  return todas
-    .filter((criacao) => criacao.featured && criacao.status === "publicado")
-    .slice(0, limite);
+  const publicadas = (await getCriacoes()).filter((criacao) => criacao.status === "publicado");
+  const destaques = publicadas.filter((criacao) => criacao.featured);
+  const recentes = publicadas.filter((criacao) => !criacao.featured);
+  return [...destaques, ...recentes].slice(0, limite);
 }
 
 export async function getCriacaoPorSlug(slug: string): Promise<Criacao | null> {

@@ -154,14 +154,19 @@ export function FormCriacao({ criacao, onSalvo, onCancelar }: FormCriacaoProps) 
         </Campo>
       </div>
 
-      <label className="flex items-center gap-3">
+      <label className="flex items-start gap-3">
         <input
           type="checkbox"
           checked={featured}
           onChange={(e) => setFeatured(e.target.checked)}
-          className="size-5 accent-laranja"
+          className="mt-0.5 size-5 shrink-0 accent-laranja"
         />
-        <span className="font-bold">Destacar na página inicial</span>
+        <span>
+          <span className="block font-bold">Destacar na página inicial</span>
+          <span className="block text-sm text-cinza">
+            Destaques aparecem primeiro; sem destaques, a página mostra as mais recentes.
+          </span>
+        </span>
       </label>
 
       <fieldset className="space-y-6 border-t border-grafite/10 pt-6">
