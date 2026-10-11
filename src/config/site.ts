@@ -12,17 +12,20 @@ export const siteConfig = {
   url: resolverUrlDoSite(),
 } as const;
 
+/** Domínio oficial. engenhices.com (sem www) redireciona para cá na Vercel. */
+const DOMINIO_DE_PRODUCAO = "https://www.engenhices.com";
+
 /**
  * URL pública do site, em ordem de preferência:
- * 1. NEXT_PUBLIC_SITE_URL, quando definida (domínio próprio);
- * 2. o domínio de produção que a Vercel injeta no build;
- * 3. localhost, em desenvolvimento.
+ * 1. NEXT_PUBLIC_SITE_URL, quando definida (para trocar o domínio sem mexer no código);
+ * 2. o domínio oficial, nos builds de produção da Vercel;
+ * 3. o endereço da própria pré-visualização, nos deploys de preview;
+ * 4. localhost, em desenvolvimento.
  */
 function resolverUrlDoSite(): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  }
+  if (process.env.VERCEL_ENV === "production") return DOMINIO_DE_PRODUCAO;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }
 

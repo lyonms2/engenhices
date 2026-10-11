@@ -18,7 +18,7 @@ apontar para o seu anúncio oficial no Mercado Livre.
 - Tailwind CSS 4
 - ESLint
 - Firebase (Authentication, Firestore e Storage) — SDK configurado, dados ainda não conectados
-- Vercel para hospedagem — <https://engenhices.vercel.app>
+- Vercel para hospedagem — <https://www.engenhices.com> (engenhices.com redireciona para o www)
 
 ## Como rodar localmente
 
@@ -91,8 +91,8 @@ O projeto é compatível com a Vercel sem configuração extra:
 1. Importe o repositório em <https://vercel.com/new>.
 2. Framework: **Next.js** (detectado automaticamente).
 3. Build command: `npm run build` · Output: padrão do Next.js · Install: `npm install`.
-4. `NEXT_PUBLIC_SITE_URL` só é necessária com domínio próprio: sem ela, o site usa o domínio
-   de produção da Vercel (`VERCEL_PROJECT_PRODUCTION_URL`) em metadados, sitemap e Open Graph.
+4. O domínio oficial (`https://www.engenhices.com`) está em `src/config/site.ts` e é usado nos
+   builds de produção; previews usam o próprio endereço. `NEXT_PUBLIC_SITE_URL` sobrepõe os dois.
 5. Cadastre as variáveis `NEXT_PUBLIC_FIREBASE_*` do `.env.example` em
    *Settings → Environment Variables* (Production, Preview e Development).
 
