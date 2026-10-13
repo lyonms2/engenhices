@@ -57,6 +57,11 @@ export function RegistroCard({
         ) : (
           <Placeholder rotulo={registro.tiktokUrl ? "Vídeo no TikTok" : "Registro"} proporcao="16/9" tom={tom} className="h-full" />
         )}
+        {registro.modelUrl && (
+          <span className="absolute bottom-3 left-3 bg-laranja px-2 py-1 font-mono text-[0.65rem] tracking-wider text-grafite uppercase">
+            Modelo 3D
+          </span>
+        )}
         {(registro.youtubeUrl || registro.tiktokUrl) && (
           <span className="absolute right-3 bottom-3 bg-grafite/85 px-2 py-1 font-mono text-[0.65rem] tracking-wider text-branco uppercase">
             ▶ Vídeo

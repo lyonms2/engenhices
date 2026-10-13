@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { LinksDosCanais } from "@/components/brand/LinksDosCanais";
 import { ListaDeRegistros } from "@/components/laboratorio/ListaDeRegistros";
+import { RegistroCard } from "@/components/laboratorio/RegistroCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { lojaDeModelos } from "@/config/site";
 import { getRegistros } from "@/lib/laboratorio";
 import { DESCRICAO_DOS_TIPOS, TIPOS_DE_REGISTRO, type TipoDeRegistro } from "@/types/laboratorio";
 
@@ -16,6 +18,7 @@ export const metadata: Metadata = {
 
 export default async function LaboratorioPage() {
   const registros = await getRegistros();
+  const comModelo = registros.filter((registro) => registro.modelUrl);
 
   return (
     <>
@@ -26,6 +29,37 @@ export default async function LaboratorioPage() {
       >
         <LinksDosCanais className="mt-8" />
       </PageHeader>
+
+      <Section tom="escuro" labelledBy="modelos-titulo" className="border-t border-branco/10 bg-prancheta">
+        <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+          <SectionHeading
+            id="modelos-titulo"
+            tom="escuro"
+            eyebrow="Modelos 3D"
+            title="Imprima em casa."
+            description={`Os modelos das peças desenvolvidas aqui, prontos para a sua impressora. A compra e o download são feitos no ${lojaDeModelos.nome}.`}
+          />
+          <a
+            href={lojaDeModelos.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 bg-laranja px-5 text-sm font-bold text-grafite hover:bg-[#ff7f22]"
+          >
+            Ver todos no {lojaDeModelos.nome}
+            <span aria-hidden="true">↗</span>
+            <span className="sr-only"> (abre em nova aba)</span>
+          </a>
+        </div>
+        {comModelo.length > 0 && (
+          <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {comModelo.slice(0, 6).map((registro) => (
+              <li key={registro.id}>
+                <RegistroCard registro={registro} tom="escuro" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
       <Section labelledBy="registros-titulo">
         <SectionHeading

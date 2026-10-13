@@ -39,6 +39,8 @@ export function docParaRegistro(id: string, dados: RegistroLabDoc): RegistroLab 
     ...dados,
     id,
     images: dados.images ?? [],
+    // Registros anteriores ao campo de modelo 3D não o têm.
+    modelUrl: dados.modelUrl ?? null,
     createdAt: dados.createdAt?.toDate().toISOString() ?? new Date(0).toISOString(),
     updatedAt: dados.updatedAt?.toDate().toISOString() ?? new Date(0).toISOString(),
   };

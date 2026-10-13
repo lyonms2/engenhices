@@ -53,6 +53,7 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
     youtubeUrl: registro?.youtubeUrl ?? rascunho?.youtubeUrl ?? "",
     tiktokUrl: registro?.tiktokUrl ?? rascunho?.tiktokUrl ?? "",
     creationSlug: registro?.creationSlug ?? rascunho?.creationSlug ?? "",
+    modelUrl: registro?.modelUrl ?? "",
     status: registro?.status ?? ("rascunho" as StatusDoRegistro),
     images: registro?.images ?? ([] as ImagemCriacao[]),
   };
@@ -66,6 +67,7 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
   const [youtubeUrl, setYoutubeUrl] = useState(inicial.youtubeUrl);
   const [tiktokUrl, setTiktokUrl] = useState(inicial.tiktokUrl);
   const [creationSlug, setCreationSlug] = useState(inicial.creationSlug);
+  const [modelUrl, setModelUrl] = useState(inicial.modelUrl);
   const [status, setStatus] = useState<StatusDoRegistro>(inicial.status);
   const [images, setImages] = useState<ImagemCriacao[]>(inicial.images);
   const [enviandoFotos, setEnviandoFotos] = useState(false);
@@ -88,7 +90,7 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
 
   const [retratoInicial] = useState(() => JSON.stringify(inicial));
   const alterado =
-    JSON.stringify({ title, type, summary, body, youtubeUrl, tiktokUrl, creationSlug, status, images }) !==
+    JSON.stringify({ title, type, summary, body, youtubeUrl, tiktokUrl, creationSlug, modelUrl, status, images }) !==
       retratoInicial;
 
   useEffect(() => {
@@ -114,6 +116,10 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
       setErro("Defina um título para gerar o endereço da página.");
       return;
     }
+    if (modelUrl.trim() && !/^https?:\/\/\S+\.\S+/i.test(modelUrl.trim())) {
+      setErro("O link do modelo 3D precisa ser um endereço completo, começando com https://");
+      return;
+    }
 
     const dados: DadosRegistro = {
       title: title.trim(),
@@ -125,6 +131,7 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
       youtubeUrl: youtubeUrl.trim() || null,
       tiktokUrl: tiktokUrl.trim() || null,
       creationSlug: creationSlug || null,
+      modelUrl: modelUrl.trim() || null,
       status,
     };
 
@@ -234,6 +241,23 @@ export function FormRegistro({ registro, rascunho, criacoes, onSalvo, onCancelar
         </Campo>
         <Campo rotulo="Vídeo no TikTok">
           <input type="url" maxLength={500} value={tiktokUrl} onChange={(e) => setTiktokUrl(e.target.value)} placeholder="https://www.tiktok.com/@…/video/…" className={campo} />
+        </Campo>
+      </fieldset>
+
+      <fieldset className="space-y-6 border-t border-grafite/10 pt-6">
+        <legend className="font-mono text-xs tracking-wider text-cinza uppercase">Modelo 3D (opcional)</legend>
+        <Campo
+          rotulo="Link do modelo para baixar ou comprar"
+          ajuda="A página do modelo no MakerWorld (ou Printables, Thingiverse). O registro ganha o botão de download e entra na seção Modelos 3D do Laboratório."
+        >
+          <input
+            type="url"
+            maxLength={500}
+            value={modelUrl}
+            onChange={(e) => setModelUrl(e.target.value)}
+            placeholder="https://makerworld.com/pt/models/…"
+            className={campo}
+          />
         </Campo>
       </fieldset>
 

@@ -129,6 +129,7 @@ export function ListaRegistros({
                     <span className="text-cinza">↳ {nomeDaCriacao(registro.creationSlug)}</span>
                   )}
                   {(registro.youtubeUrl || registro.tiktokUrl) && <span className="text-cinza">▶ vídeo</span>}
+                  {registro.modelUrl && <span className="text-cinza">◆ modelo 3D</span>}
                 </p>
               </div>
               <div className="flex gap-2">

@@ -10,17 +10,25 @@ import { RegistroCard } from "./RegistroCard";
  * não aparecem, para não oferecer filtros vazios.
  */
 export function ListaDeRegistros({ registros }: { registros: RegistroLab[] }) {
-  const [tipo, setTipo] = useState<"todos" | TipoDeRegistro>("todos");
+  // "modelo" não é um tipo: filtra os registros com modelo 3D para baixar.
+  const [tipo, setTipo] = useState<"todos" | "modelo" | TipoDeRegistro>("todos");
   const tiposUsados = (Object.keys(TIPOS_DE_REGISTRO) as TipoDeRegistro[]).filter((valor) =>
     registros.some((registro) => registro.type === valor),
   );
-  const visiveis = registros.filter((registro) => tipo === "todos" || registro.type === tipo);
+  const temModelos = registros.some((registro) => registro.modelUrl);
+  const visiveis = registros.filter((registro) =>
+    tipo === "todos" ? true : tipo === "modelo" ? Boolean(registro.modelUrl) : registro.type === tipo,
+  );
 
   return (
     <div>
-      {tiposUsados.length > 1 && (
+      {(tiposUsados.length > 1 || temModelos) && (
         <div role="group" aria-label="Filtrar por tipo" className="mb-8 flex flex-wrap gap-2">
-          {[["todos", "Todos"] as const, ...tiposUsados.map((valor) => [valor, TIPOS_DE_REGISTRO[valor]] as const)].map(
+          {[
+            ["todos", "Todos"] as const,
+            ...(temModelos ? [["modelo", "Com modelo 3D"] as const] : []),
+            ...tiposUsados.map((valor) => [valor, TIPOS_DE_REGISTRO[valor]] as const),
+          ].map(
             ([valor, nome]) => (
               <button
                 key={valor}

@@ -8,6 +8,7 @@ import { Container } from "@/components/ui/Section";
 import { SecaoVideos, videosDe } from "@/components/videos/SecaoVideos";
 import { getCriacaoPorSlug } from "@/lib/criacoes";
 import { getRegistroPorSlug, getRegistros } from "@/lib/laboratorio";
+import { lojaDoModelo } from "@/lib/utils";
 
 /** Com Cache Components a lista não pode ser vazia; o slug provisório responde 404. */
 export async function generateStaticParams() {
@@ -105,6 +106,28 @@ export default async function RegistroPage({ params }: PageProps<"/laboratorio/[
             <ButtonLink href={`/criacoes/${criacao.slug}`} comSeta>
               Ver o produto
             </ButtonLink>
+          </aside>
+        )}
+
+        {registro.modelUrl && (
+          <aside className="mt-8 flex max-w-3xl flex-wrap items-center justify-between gap-4 bg-grafite px-5 py-5 text-branco">
+            <p>
+              <span className="block font-mono text-xs tracking-wider text-laranja uppercase">Modelo 3D</span>
+              <span className="mt-1 block text-lg font-bold">Imprima você mesmo</span>
+              <span className="mt-1 block text-sm text-cinza-claro">
+                A compra e o download são feitos no {lojaDoModelo(registro.modelUrl)}.
+              </span>
+            </p>
+            <a
+              href={registro.modelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 bg-laranja px-5 text-sm font-bold text-grafite hover:bg-[#ff7f22]"
+            >
+              Baixar no {lojaDoModelo(registro.modelUrl)}
+              <span aria-hidden="true">↗</span>
+              <span className="sr-only"> (abre em nova aba)</span>
+            </a>
           </aside>
         )}
 

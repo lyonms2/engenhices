@@ -49,6 +49,11 @@ export type RegistroLab = {
   tiktokUrl: string | null;
   /** Slug da criação associada; null em projetos e conteúdos avulsos. */
   creationSlug: string | null;
+  /**
+   * Página do modelo 3D (STL) para comprar ou baixar, no MakerWorld ou em
+   * outro repositório. A venda acontece lá, não no site.
+   */
+  modelUrl: string | null;
   status: StatusDoRegistro;
   /** ISO 8601. */
   createdAt: string;

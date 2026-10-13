@@ -104,3 +104,17 @@ export function plataformaDoLink(url: string): "YouTube" | "TikTok" | null {
     return null;
   }
 }
+
+/** Nome do site de um link de modelo 3D, para o texto do botão. */
+export function lojaDoModelo(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    if (host.endsWith("makerworld.com")) return "MakerWorld";
+    if (host.endsWith("printables.com")) return "Printables";
+    if (host.endsWith("thingiverse.com")) return "Thingiverse";
+    if (host.endsWith("cults3d.com")) return "Cults3D";
+    return host;
+  } catch {
+    return "site do modelo";
+  }
+}

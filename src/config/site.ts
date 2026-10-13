@@ -51,9 +51,12 @@ export type SocialLink = {
   href?: string;
 };
 
+const PERFIL_MAKERWORLD = "https://makerworld.com/pt/@Engenhices";
+
 export const socialLinks: readonly SocialLink[] = [
   { label: "YouTube", href: "https://www.youtube.com/@Engenhices" },
   { label: "TikTok", href: "https://www.tiktok.com/@engenhices" },
+  { label: "MakerWorld", href: PERFIL_MAKERWORLD },
   { label: "Instagram" },
 ];
 
@@ -67,3 +70,9 @@ export const legalLinks: readonly SocialLink[] = [
 export const perfisAtivos = socialLinks.filter(
   (rede): rede is SocialLink & { href: string } => Boolean(rede.href),
 );
+
+/** Loja de modelos 3D (STL) da marca: a venda e o download acontecem lá. */
+export const lojaDeModelos = {
+  nome: "MakerWorld",
+  href: PERFIL_MAKERWORLD,
+} as const;
