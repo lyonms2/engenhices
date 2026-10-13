@@ -24,9 +24,11 @@ export function Header() {
           </Suspense>
         </nav>
 
-        {/* A visibilidade fica no contêiner: o botão já define o próprio display. */}
-        <div className="hidden md:block">
-          <ButtonLink href="/criacoes" tamanho="compacto">
+        {/* A visibilidade fica no contêiner: o botão já define o próprio display.
+            Só a partir de lg: entre md e lg o menu ocupa a largura e o botão quebrava em duas linhas
+            (o link "Criações" do menu leva ao mesmo lugar). */}
+        <div className="hidden shrink-0 lg:block">
+          <ButtonLink href="/criacoes" tamanho="compacto" className="whitespace-nowrap">
             Explorar criações
           </ButtonLink>
         </div>
