@@ -26,10 +26,10 @@ export function Header() {
 
         {/* A visibilidade fica no contêiner: o botão já define o próprio display.
             Só a partir de lg: entre md e lg o menu ocupa a largura e o botão quebrava em duas linhas
-            (o link "Criações" do menu leva ao mesmo lugar). */}
+            (o menu já tem o link "Encomendas"). */}
         <div className="hidden shrink-0 lg:block">
-          <ButtonLink href="/criacoes" tamanho="compacto" className="whitespace-nowrap">
-            Explorar criações
+          <ButtonLink href="/encomendas" tamanho="compacto" className="whitespace-nowrap">
+            Fazer encomenda
           </ButtonLink>
         </div>
 
@@ -37,8 +37,8 @@ export function Header() {
           <Suspense fallback={<NavList orientacao="vertical" />}>
             <ActiveNavList orientacao="vertical" />
           </Suspense>
-          <ButtonLink href="/criacoes" comSeta className="mt-8 w-full">
-            Explorar criações
+          <ButtonLink href="/encomendas" comSeta className="mt-8 w-full">
+            Fazer encomenda
           </ButtonLink>
         </MobileMenu>
       </Container>
