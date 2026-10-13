@@ -43,8 +43,8 @@ export const mainNav: readonly NavItem[] = [
 ];
 
 /**
- * Redes sociais da marca. Os perfis ainda não existem: cada entrada fica sem
- * `href` até o endereço oficial ser informado, e o rodapé mostra "em breve".
+ * Redes sociais da marca. Uma entrada sem `href` é um perfil que ainda não
+ * existe: o rodapé mostra "em breve" no lugar do link.
  */
 export type SocialLink = {
   label: string;
@@ -52,8 +52,8 @@ export type SocialLink = {
 };
 
 export const socialLinks: readonly SocialLink[] = [
-  { label: "YouTube" },
-  { label: "TikTok" },
+  { label: "YouTube", href: "https://www.youtube.com/@Engenhices" },
+  { label: "TikTok", href: "https://www.tiktok.com/@engenhices" },
   { label: "Instagram" },
 ];
 
@@ -62,3 +62,8 @@ export const legalLinks: readonly SocialLink[] = [
   { label: "Política de privacidade" },
   { label: "Termos de uso" },
 ];
+
+/** Perfis com endereço, para links e para os dados estruturados (sameAs). */
+export const perfisAtivos = socialLinks.filter(
+  (rede): rede is SocialLink & { href: string } => Boolean(rede.href),
+);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LinksDosCanais } from "@/components/brand/LinksDosCanais";
 import { ListaDeRegistros } from "@/components/laboratorio/ListaDeRegistros";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/ui/Section";
@@ -22,7 +23,9 @@ export default async function LaboratorioPage() {
         eyebrow="Engenhices Lab"
         title="Onde as ideias são postas à prova."
         description="O Lab documenta como uma ideia vira produto: experimentos, protótipos, testes, erros, melhorias e resultados. Inclusive o que deu errado, e o que aprendemos com isso."
-      />
+      >
+        <LinksDosCanais className="mt-8" />
+      </PageHeader>
 
       <Section labelledBy="registros-titulo">
         <SectionHeading

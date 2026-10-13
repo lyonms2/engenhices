@@ -1,3 +1,4 @@
+import { LinksDosCanais } from "@/components/brand/LinksDosCanais";
 import { RegistroCard } from "@/components/laboratorio/RegistroCard";
 import { ButtonLink } from "@/components/ui/Button";
 import { Section } from "@/components/ui/Section";
@@ -23,6 +24,8 @@ export async function LabSection() {
           {registros.length > 0 ? "Ver todos os registros" : "Conhecer o laboratório"}
         </ButtonLink>
       </div>
+
+      <LinksDosCanais className="mt-8" />
 
       {registros.length > 0 ? (
         <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
