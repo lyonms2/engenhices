@@ -57,7 +57,7 @@ export const socialLinks: readonly SocialLink[] = [
   { label: "YouTube", href: "https://www.youtube.com/@Engenhices" },
   { label: "TikTok", href: "https://www.tiktok.com/@engenhices" },
   { label: "MakerWorld", href: PERFIL_MAKERWORLD },
-  { label: "Instagram" },
+  { label: "Instagram", href: "https://www.instagram.com/engenhices/" },
 ];
 
 /** Páginas legais. Sem `href`, a página ainda não existe e aparece "em breve". */
