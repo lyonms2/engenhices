@@ -462,6 +462,14 @@ export function FormEncomenda({ referencia: referenciaInicial }: { referencia?: 
             ? "Enviando…"
             : "Enviar pedido de orçamento"}
       </button>
+      <p className="text-xs text-cinza">
+        Ao enviar, você concorda com os{" "}
+        <a href="/termos" target="_blank" className="underline underline-offset-4">
+          termos de uso
+          <span className="sr-only"> (abre em nova aba)</span>
+        </a>
+        . O pedido não gera compromisso nem cobrança.
+      </p>
     </form>
   );
 }

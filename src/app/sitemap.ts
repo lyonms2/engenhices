@@ -4,7 +4,7 @@ import { getCriacoes } from "@/lib/criacoes";
 import { getRegistros } from "@/lib/laboratorio";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const paginas = [...mainNav, { href: "/privacidade" }].map((item) => ({
+  const paginas = [...mainNav, { href: "/privacidade" }, { href: "/termos" }].map((item) => ({
     url: `${siteConfig.url}${item.href === "/" ? "" : item.href}`,
   }));
 

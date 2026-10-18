@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { SecaoLegal } from "@/components/legal/SecaoLegal";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Container } from "@/components/ui/Section";
 import { responsavelPelosDados, siteConfig } from "@/config/site";
@@ -50,16 +50,16 @@ export default function PrivacidadePage() {
             </p>
           )}
 
-          <Bloco titulo="Em poucas palavras">
+          <SecaoLegal titulo="Em poucas palavras">
             <ul className="list-disc space-y-2 pl-5">
               <li>Só coletamos dados quando você envia um pedido de orçamento.</li>
               <li>Usamos esses dados apenas para analisar e responder ao seu pedido.</li>
               <li>Não vendemos dados, não usamos cookies de rastreamento nem de publicidade.</li>
               <li>Você pode pedir a qualquer momento para ver, corrigir ou apagar seus dados.</li>
             </ul>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Quem é o responsável">
+          <SecaoLegal titulo="Quem é o responsável">
             <p>
               O responsável pelo tratamento dos seus dados (controlador, nos termos da Lei Geral de
               Proteção de Dados, Lei nº 13.709/2018) é{" "}
@@ -68,9 +68,9 @@ export default function PrivacidadePage() {
               {siteConfig.url.replace(/^https?:\/\//, "")}. Para qualquer assunto sobre seus dados,
               escreva para {contato}.
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Quais dados coletamos">
+          <SecaoLegal titulo="Quais dados coletamos">
             <h3 className="font-bold">Quando você envia um pedido de orçamento</h3>
             <p>
               Pelo formulário da página de <Link href="/encomendas" className="underline underline-offset-4">encomendas</Link>,
@@ -100,9 +100,9 @@ export default function PrivacidadePage() {
               registros são mantidos pelo provedor de hospedagem para segurança e funcionamento do
               site. Não usamos ferramentas de análise de audiência nem de publicidade.
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Para que usamos e com qual base legal">
+          <SecaoLegal titulo="Para que usamos e com qual base legal">
             <ul className="list-disc space-y-2 pl-5">
               <li>
                 <strong>Analisar e responder ao seu pedido de orçamento</strong>, entrar em contato
@@ -124,9 +124,9 @@ export default function PrivacidadePage() {
               Não usamos seus dados para enviar propaganda, não os vendemos e não tomamos decisões
               automatizadas sobre você.
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Com quem compartilhamos">
+          <SecaoLegal titulo="Com quem compartilhamos">
             <p>
               Para o site funcionar, os dados ficam guardados em serviços contratados, que os tratam
               apenas para nos prestar o serviço:
@@ -152,9 +152,9 @@ export default function PrivacidadePage() {
               As compras são feitas no Mercado Livre e os modelos 3D são baixados no MakerWorld.
               Nesses sites, valem as políticas de privacidade deles.
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Por quanto tempo guardamos">
+          <SecaoLegal titulo="Por quanto tempo guardamos">
             <p>Guardamos os dados só pelo tempo necessário para atender ao seu pedido:</p>
             <ul className="list-disc space-y-2 pl-5">
               <li>enquanto o pedido estiver em análise ou em andamento;</li>
@@ -174,26 +174,26 @@ export default function PrivacidadePage() {
               apagamos antes, exceto o que precisarmos guardar para nos defender em uma reclamação
               sobre um pedido concluído ou por exigência legal.
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Cookies">
+          <SecaoLegal titulo="Cookies">
             <p>
               O site não usa cookies próprios de rastreamento, de análise ou de publicidade. Cookies de
               terceiros só podem aparecer quando você assiste a um vídeo incorporado do YouTube ou do
               TikTok.
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Segurança">
+          <SecaoLegal titulo="Segurança">
             <p>
               O acesso aos pedidos é restrito ao responsável, com login e regras de acesso no banco
               de dados, e todo o site funciona com conexão criptografada (HTTPS). Nenhum sistema é
               totalmente invulnerável; se ocorrer um incidente que possa trazer risco a você,
               comunicaremos você e a Autoridade Nacional de Proteção de Dados (ANPD), como prevê a lei.
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Seus direitos">
+          <SecaoLegal titulo="Seus direitos">
             <p>Pela LGPD (art. 18), você pode, a qualquer momento e sem custo:</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>confirmar se tratamos seus dados e ter acesso a eles;</li>
@@ -209,32 +209,23 @@ export default function PrivacidadePage() {
               dias. Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados
               (ANPD).
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Menores de idade">
+          <SecaoLegal titulo="Menores de idade">
             <p>
               Os pedidos de orçamento devem ser feitos por maiores de 18 anos ou com a autorização de
               um responsável legal.
             </p>
-          </Bloco>
+          </SecaoLegal>
 
-          <Bloco titulo="Mudanças nesta política">
+          <SecaoLegal titulo="Mudanças nesta política">
             <p>
               Podemos atualizar esta política quando o site mudar. A data da última atualização fica no
               topo da página; mudanças importantes também serão destacadas aqui.
             </p>
-          </Bloco>
+          </SecaoLegal>
         </div>
       </Container>
     </>
-  );
-}
-
-function Bloco({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <section className="space-y-4">
-      <h2 className="text-2xl font-extrabold tracking-tight">{titulo}</h2>
-      {children}
-    </section>
   );
 }

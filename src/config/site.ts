@@ -63,7 +63,7 @@ export const socialLinks: readonly SocialLink[] = [
 /** Páginas legais. Sem `href`, a página ainda não existe e aparece "em breve". */
 export const legalLinks: readonly SocialLink[] = [
   { label: "Política de privacidade", href: "/privacidade" },
-  { label: "Termos de uso" },
+  { label: "Termos de uso", href: "/termos" },
 ];
 
 /** Perfis com endereço, para links e para os dados estruturados (sameAs). */
