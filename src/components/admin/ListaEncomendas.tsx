@@ -9,6 +9,7 @@ import {
   mensagemDeResposta,
 } from "@/lib/encomendas/contato";
 import { PERIODO_PADRAO, correspondeABusca } from "@/lib/encomendas/filtros";
+import { estaVencido, prazoDeGuarda } from "@/lib/encomendas/prazo";
 import { codigoParaExibir } from "@/lib/encomendas/validacao";
 import {
   apagarEncomenda,
@@ -84,6 +85,8 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
   const [periodo, setPeriodo] = useState<Periodo>(PERIODO_PADRAO);
   const [intervalo, setIntervalo] = useState<Intervalo>({ de: "", ate: "" });
   const [pagina, setPagina] = useState(1);
+  // Mostra só os pedidos com prazo de guarda vencido (aviso da política de privacidade).
+  const [soVencidos, setSoVencidos] = useState(false);
   // Momento de referência para "últimos N dias", fixado ao abrir a lista.
   const [agora] = useState(() => Date.now());
 
@@ -145,6 +148,23 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
     setAberta(null);
   }
 
+  async function apagarVencidos(alvo: Encomenda[]) {
+    if (estado.tipo !== "pronto") return;
+    let restantes = estado.encomendas;
+    try {
+      for (const encomenda of alvo) {
+        await apagarEncomenda(encomenda);
+        restantes = restantes.filter((item) => item.id !== encomenda.id);
+      }
+    } finally {
+      // Mesmo se um falhar no meio, a lista mostra o que já foi apagado.
+      setEstado({ tipo: "pronto", encomendas: restantes });
+      onContagem?.(restantes.filter((item) => item.status === "nova").length);
+      setAberta(null);
+    }
+    setSoVencidos(false);
+  }
+
   if (estado.tipo === "carregando") return <p className="text-cinza">Carregando encomendas…</p>;
   if (estado.tipo === "erro") return <p className="text-sm text-red-800">{estado.mensagem}</p>;
 
@@ -166,10 +186,13 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
     encontradas.filter((encomenda) => passaNoFiltro(encomenda, "abertas")).length -
     base.filter((encomenda) => passaNoFiltro(encomenda, "abertas")).length;
 
+  // Vencidos contam sobre todos os pedidos: o prazo não depende de busca ou período.
+  const vencidos = estado.encomendas.filter((encomenda) => estaVencido(encomenda, agora));
+
   const doGrupo = base.filter((encomenda) => passaNoFiltro(encomenda, filtro));
-  const visiveis = doGrupo.filter(
-    (encomenda) => subfiltro === "todas" || encomenda.status === subfiltro,
-  );
+  const visiveis = soVencidos
+    ? vencidos
+    : doGrupo.filter((encomenda) => subfiltro === "todas" || encomenda.status === subfiltro);
   const contagem = (opcao: Filtro) =>
     base.filter((encomenda) => passaNoFiltro(encomenda, opcao)).length;
   const contagemDoGrupo = (opcao: Subfiltro) =>
@@ -182,6 +205,45 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
 
   return (
     <>
+      {vencidos.length > 0 && (
+        <div role="status" className="mb-6 border-l-2 border-red-700 bg-red-50 px-4 py-4 text-sm">
+          <p className="font-bold text-red-900">
+            {vencidos.length === 1
+              ? "1 pedido passou do prazo de guarda"
+              : `${vencidos.length} pedidos passaram do prazo de guarda`}{" "}
+            da política de privacidade.
+          </p>
+          <p className="mt-1 text-red-900/80">
+            Recusados e orçamentos sem resposta ficam até 90 dias; concluídos, até 6 meses. Depois
+            disso, a política promete apagar.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                setSoVencidos((valor) => !valor);
+                setPagina(1);
+                setAberta(null);
+              }}
+              className="font-bold text-red-900 underline underline-offset-4"
+            >
+              {soVencidos ? "Voltar à lista completa" : "Ver pedidos vencidos"}
+            </button>
+            <ConfirmarAcao
+              rotulo={vencidos.length === 1 ? "Apagar o pedido vencido" : `Apagar os ${vencidos.length} pedidos vencidos`}
+              pergunta={`Apagar ${vencidos.length === 1 ? "o pedido vencido" : `os ${vencidos.length} pedidos vencidos`}, com fotos e arquivos?`}
+              onConfirmar={() => apagarVencidos(vencidos)}
+            />
+          </div>
+        </div>
+      )}
+
+      {soVencidos ? (
+        <p className="mb-5 text-sm text-cinza">
+          Mostrando só os pedidos com prazo de guarda vencido, de qualquer data.
+        </p>
+      ) : (
+      <>
       <BuscaEPeriodo
         busca={busca}
         onBusca={(valor) => filtrar(() => setBusca(valor))}
@@ -235,6 +297,9 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
         />
       )}
 
+      </>
+      )}
+
       {visiveis.length === 0 && (
         <p className="border border-dashed border-grafite/20 px-6 py-10 text-center text-cinza">
           {busca.trim()
@@ -266,6 +331,11 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
                 >
                   {STATUS_ENCOMENDA[encomenda.status]}
                 </span>
+                {estaVencido(encomenda, agora) && (
+                  <span className="bg-red-800 px-2 py-1 font-mono text-[0.68rem] tracking-wider text-white uppercase">
+                    Prazo vencido
+                  </span>
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block font-bold">
                     <span className="mr-2 font-mono text-sm font-medium text-cinza">
@@ -349,6 +419,8 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
                     </Detalhe>
                   )}
 
+                  <PrazoDoPedido encomenda={encomenda} agora={agora} />
+
                   <label className="block max-w-xs">
                     <span className="font-mono text-xs tracking-wider text-cinza uppercase">Situação</span>
                     <select
@@ -409,6 +481,21 @@ function BotaoResponder({ encomenda }: { encomenda: Encomenda }) {
       <span aria-hidden="true">↗</span>
       <span className="sr-only"> (abre em nova aba)</span>
     </a>
+  );
+}
+
+const dataCurta = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
+
+/** Quanto tempo o pedido ainda pode ficar guardado, conforme a política de privacidade. */
+function PrazoDoPedido({ encomenda, agora }: { encomenda: Encomenda; agora: number }) {
+  const prazo = prazoDeGuarda(encomenda, agora);
+  if (prazo.tipo === "em-andamento") return null;
+  return (
+    <p className={prazo.tipo === "vencido" ? "text-sm font-bold text-red-800" : "text-sm text-cinza"}>
+      {prazo.tipo === "vencido"
+        ? `Prazo de guarda vencido em ${dataCurta.format(prazo.venceuEm)}: a política pede para apagar este pedido.`
+        : `Guardado até ${dataCurta.format(prazo.venceEm)} (faltam ${prazo.diasRestantes} dias), conforme a política de privacidade.`}
+    </p>
   );
 }
 

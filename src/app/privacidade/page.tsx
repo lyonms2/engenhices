@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Container } from "@/components/ui/Section";
 import { responsavelPelosDados, siteConfig } from "@/config/site";
+import { DIAS_DE_GUARDA } from "@/lib/encomendas/prazo";
 
 export const metadata: Metadata = {
   title: "Política de privacidade",
@@ -15,8 +16,6 @@ export const metadata: Metadata = {
 /** Data da última revisão do texto. Atualize sempre que a política mudar. */
 const ATUALIZADA_EM = "18 de outubro de 2026";
 
-/** Prazo de guarda dos pedidos encerrados, prometido no texto. */
-const MESES_DE_GUARDA = 12;
 
 export default function PrivacidadePage() {
   const { nome, documento, email } = responsavelPelosDados;
@@ -151,11 +150,24 @@ export default function PrivacidadePage() {
           </Bloco>
 
           <Bloco titulo="Por quanto tempo guardamos">
+            <p>Guardamos os dados só pelo tempo necessário para atender ao seu pedido:</p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>enquanto o pedido estiver em análise ou em andamento;</li>
+              <li>
+                pedidos recusados, ou com orçamento enviado e sem resposta: apagados em até{" "}
+                {DIAS_DE_GUARDA.recusada} dias depois da última movimentação;
+              </li>
+              <li>
+                pedidos concluídos: guardados por até {Math.round((DIAS_DE_GUARDA.concluida ?? 0) / 30)}{" "}
+                meses depois da conclusão, para questões de garantia e para atender a novos pedidos
+                parecidos.
+              </li>
+            </ul>
             <p>
-              Mantemos os dados do pedido enquanto ele estiver em análise ou em andamento e por até{" "}
-              {MESES_DE_GUARDA} meses depois de encerrado, para atender a eventuais dúvidas sobre o
-              que foi combinado. Depois disso, o pedido é apagado, junto com as fotos e o arquivo 3D.
-              Se você pedir, apagamos antes, a menos que a lei exija guardar alguma informação.
+              As fotos de referência e o arquivo 3D são apagados junto com o pedido. Depois desses
+              prazos, podemos manter apenas a parte técnica do pedido (descrição, medidas e arquivo),
+              sem nada que identifique você. Se você pedir, apagamos antes, a menos que a lei exija
+              guardar alguma informação.
             </p>
           </Bloco>
 
