@@ -79,11 +79,12 @@ export const lojaDeModelos = {
 
 /**
  * Responsável pelo tratamento dos dados pessoais (LGPD, art. 9º, III), exibido
- * na política de privacidade. PREENCHER antes de publicar: nome da pessoa ou
- * razão social, documento (CNPJ, se houver; opcional) e um e-mail de contato.
+ * na política de privacidade: nome da pessoa ou razão social, documento
+ * (CNPJ, se houver; opcional) e um e-mail de contato. Sem nome e e-mail, o
+ * build de produção da página /privacidade falha de propósito.
  */
 export const responsavelPelosDados = {
-  nome: "",
+  nome: "Leonardo Moreno",
   documento: "",
-  email: "",
+  email: "engenhices@gmail.com",
 } as const;

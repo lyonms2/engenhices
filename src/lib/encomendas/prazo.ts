@@ -4,12 +4,22 @@ import type { Encomenda, StatusEncomenda } from "@/types/encomenda";
  * Prazo de guarda dos pedidos, o mesmo prometido na política de privacidade
  * (/privacidade). Conta a partir da última mudança de situação (updatedAt).
  * Pedidos novos ou em análise ainda estão em andamento e não vencem.
+ *
+ * Concluídos ficam 5 anos, com a identidade do cliente: é o prazo do CDC
+ * (art. 27) para reclamar de danos, e a guarda serve para comprovar o que foi
+ * pedido e entregue (LGPD, art. 7º, VI).
  */
 export const DIAS_DE_GUARDA: Partial<Record<StatusEncomenda, number>> = {
   recusada: 90,
   "orcamento-enviado": 90,
-  concluida: 180,
+  concluida: 5 * 365,
 };
+
+/** Prazo em texto, para a política e o painel: "90 dias", "5 anos". */
+export function prazoEmTexto(dias: number): string {
+  if (dias % 365 === 0) return dias === 365 ? "1 ano" : `${dias / 365} anos`;
+  return `${dias} dias`;
+}
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 

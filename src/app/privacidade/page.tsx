@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Container } from "@/components/ui/Section";
 import { responsavelPelosDados, siteConfig } from "@/config/site";
-import { DIAS_DE_GUARDA } from "@/lib/encomendas/prazo";
+import { DIAS_DE_GUARDA, prazoEmTexto } from "@/lib/encomendas/prazo";
 
 export const metadata: Metadata = {
   title: "Política de privacidade",
@@ -111,6 +111,11 @@ export default function PrivacidadePage() {
                 preliminares a um contrato, a seu pedido (LGPD, art. 7º, I e V).
               </li>
               <li>
+                <strong>Guardar os pedidos concluídos</strong> para responder a eventuais reclamações
+                sobre o que foi entregue. Base legal: exercício regular de direitos, inclusive em
+                processo judicial ou administrativo (LGPD, art. 7º, VI).
+              </li>
+              <li>
                 <strong>Segurança do site</strong>, com os registros técnicos de acesso e o controle
                 de envios. Base legal: legítimo interesse em manter o site seguro (LGPD, art. 7º, IX).
               </li>
@@ -155,19 +160,19 @@ export default function PrivacidadePage() {
               <li>enquanto o pedido estiver em análise ou em andamento;</li>
               <li>
                 pedidos recusados, ou com orçamento enviado e sem resposta: apagados em até{" "}
-                {DIAS_DE_GUARDA.recusada} dias depois da última movimentação;
+                {prazoEmTexto(DIAS_DE_GUARDA.recusada ?? 0)} depois da última movimentação;
               </li>
               <li>
-                pedidos concluídos: guardados por até {Math.round((DIAS_DE_GUARDA.concluida ?? 0) / 30)}{" "}
-                meses depois da conclusão, para questões de garantia e para atender a novos pedidos
-                parecidos.
+                pedidos concluídos: guardados por até {prazoEmTexto(DIAS_DE_GUARDA.concluida ?? 0)}{" "}
+                depois da conclusão, com os dados de quem pediu, para comprovar o que foi combinado e
+                entregue em caso de reclamação. É o prazo que o Código de Defesa do Consumidor dá para
+                reclamar de danos causados por um produto (art. 27).
               </li>
             </ul>
             <p>
-              As fotos de referência e o arquivo 3D são apagados junto com o pedido. Depois desses
-              prazos, podemos manter apenas a parte técnica do pedido (descrição, medidas e arquivo),
-              sem nada que identifique você. Se você pedir, apagamos antes, a menos que a lei exija
-              guardar alguma informação.
+              As fotos de referência e o arquivo 3D são apagados junto com o pedido. Se você pedir,
+              apagamos antes, exceto o que precisarmos guardar para nos defender em uma reclamação
+              sobre um pedido concluído ou por exigência legal.
             </p>
           </Bloco>
 

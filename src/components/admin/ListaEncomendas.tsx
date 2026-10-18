@@ -9,7 +9,7 @@ import {
   mensagemDeResposta,
 } from "@/lib/encomendas/contato";
 import { PERIODO_PADRAO, correspondeABusca } from "@/lib/encomendas/filtros";
-import { estaVencido, prazoDeGuarda } from "@/lib/encomendas/prazo";
+import { DIAS_DE_GUARDA, estaVencido, prazoDeGuarda, prazoEmTexto } from "@/lib/encomendas/prazo";
 import { codigoParaExibir } from "@/lib/encomendas/validacao";
 import {
   apagarEncomenda,
@@ -214,8 +214,9 @@ export function ListaEncomendas({ onContagem }: { onContagem?: (novas: number) =
             da política de privacidade.
           </p>
           <p className="mt-1 text-red-900/80">
-            Recusados e orçamentos sem resposta ficam até 90 dias; concluídos, até 6 meses. Depois
-            disso, a política promete apagar.
+            Recusados e orçamentos sem resposta ficam até {prazoEmTexto(DIAS_DE_GUARDA.recusada ?? 0)};
+            concluídos, até {prazoEmTexto(DIAS_DE_GUARDA.concluida ?? 0)}. Depois disso, a política
+            promete apagar.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-4">
             <button
