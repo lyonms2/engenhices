@@ -150,6 +150,26 @@ export default async function CriacaoPage({ params }: PageProps<"/criacoes/[slug
             )}
           </div>
 
+          {/* Sob medida: outro tamanho, cor ou adaptação. Vira a ação principal
+              quando o produto não está à venda. */}
+          {criacao.customizable && !criacao.demo && (
+            <div className="mt-6 border-t border-grafite/10 pt-6">
+              <p className="font-bold">Precisa de outro tamanho, cor ou adaptação?</p>
+              <p className="mt-1 text-sm text-cinza">
+                Fazemos uma versão sob medida a partir desta criação. O primeiro passo é um pedido
+                de orçamento, sem compromisso.
+              </p>
+              <ButtonLink
+                href={`/encomendas?${new URLSearchParams({ produto: criacao.slug, titulo: criacao.title })}#pedido`}
+                variante={criacao.mercadoLivreUrl && criacao.status === "publicado" ? "secundarioClaro" : "primario"}
+                comSeta
+                className="mt-4 w-full sm:w-auto"
+              >
+                Encomendar sob medida
+              </ButtonLink>
+            </div>
+          )}
+
           {criacao.description && (
             <DescricaoExpansivel
               texto={criacao.description}

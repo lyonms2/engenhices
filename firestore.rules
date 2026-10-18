@@ -21,7 +21,8 @@ service cloud.firestore {
     function criacaoValida(d, slug) {
       return d.keys().hasOnly([
           'title', 'slug', 'description', 'images', 'category', 'featured',
-          'status', 'youtubeUrl', 'tiktokUrl', 'mercadoLivreUrl', 'createdAt', 'updatedAt'
+          'status', 'youtubeUrl', 'tiktokUrl', 'mercadoLivreUrl', 'customizable',
+          'createdAt', 'updatedAt'
         ])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 120
         && d.slug == slug && slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && slug.size() <= 80
@@ -33,6 +34,7 @@ service cloud.firestore {
         && urlOuNulo(d.youtubeUrl)
         && urlOuNulo(d.tiktokUrl)
         && urlOuNulo(d.mercadoLivreUrl)
+        && (!('customizable' in d) || d.customizable is bool)
         && d.createdAt is timestamp
         && d.updatedAt == request.time;
     }

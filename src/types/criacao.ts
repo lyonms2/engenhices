@@ -47,6 +47,8 @@ export type Criacao = {
   tiktokUrl: string | null;
   /** Anúncio oficial no Mercado Livre, onde a compra é concluída. */
   mercadoLivreUrl: string | null;
+  /** Mostra o botão "Encomendar sob medida" na página do produto. */
+  customizable: boolean;
   /** Datas em ISO 8601. No Firestore viram Timestamp e são convertidas na leitura. */
   createdAt: string;
   updatedAt: string;

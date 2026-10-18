@@ -61,6 +61,7 @@ export function FormCriacao({
   const [category, setCategory] = useState<Categoria>(criacao?.category ?? "utilidades");
   const [status, setStatus] = useState<StatusCriacao>(criacao?.status ?? "rascunho");
   const [featured, setFeatured] = useState(criacao?.featured ?? false);
+  const [customizable, setCustomizable] = useState(criacao?.customizable ?? true);
   // Vídeo de apresentação: um campo só; ao salvar, vai para youtubeUrl ou
   // tiktokUrl conforme o domínio do link.
   const [video, setVideo] = useState(criacao?.youtubeUrl ?? criacao?.tiktokUrl ?? "");
@@ -99,7 +100,7 @@ export function FormCriacao({
   // Retrato do formulário, para saber se há alterações não salvas.
   const retrato = (valores: {
     title: string; description: string; category: Categoria; status: StatusCriacao;
-    featured: boolean; video: string; mercadoLivreUrl: string;
+    featured: boolean; customizable: boolean; video: string; mercadoLivreUrl: string;
     images: ImagemCriacao[];
   }) => JSON.stringify(valores);
   const [retratoInicial] = useState(() =>
@@ -109,13 +110,14 @@ export function FormCriacao({
       category: criacao?.category ?? "utilidades",
       status: criacao?.status ?? "rascunho",
       featured: criacao?.featured ?? false,
+      customizable: criacao?.customizable ?? true,
       video: criacao?.youtubeUrl ?? criacao?.tiktokUrl ?? "",
       mercadoLivreUrl: criacao?.mercadoLivreUrl ?? "",
       images: criacao?.images ?? [],
     }),
   );
   const alterado =
-    retrato({ title, description, category, status, featured, video, mercadoLivreUrl, images }) !==
+    retrato({ title, description, category, status, featured, customizable, video, mercadoLivreUrl, images }) !==
     retratoInicial;
 
   // Avisa antes de fechar ou recarregar a aba com alterações não salvas.
@@ -159,6 +161,7 @@ export function FormCriacao({
       images: images.map((imagem) => ({ ...imagem, alt: imagem.alt.trim() })),
       category,
       featured,
+      customizable,
       status,
       youtubeUrl: plataformaDoVideo === "YouTube" ? videoLimpo : null,
       tiktokUrl: plataformaDoVideo === "TikTok" ? videoLimpo : null,
@@ -268,6 +271,22 @@ export function FormCriacao({
           <span className="block font-bold">Destacar na página inicial</span>
           <span className="block text-sm text-cinza">
             Destaques aparecem primeiro; sem destaques, a página mostra as mais recentes.
+          </span>
+        </span>
+      </label>
+
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={customizable}
+          onChange={(e) => setCustomizable(e.target.checked)}
+          className="mt-0.5 size-5 shrink-0 accent-laranja"
+        />
+        <span>
+          <span className="block font-bold">Aceita encomenda sob medida</span>
+          <span className="block text-sm text-cinza">
+            Mostra o botão &ldquo;Encomendar sob medida&rdquo; na página do produto, que leva ao
+            formulário de encomendas já com a referência dele.
           </span>
         </span>
       </label>

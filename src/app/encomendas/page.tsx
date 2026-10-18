@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { FormEncomenda } from "@/components/encomendas/FormEncomenda";
+import { FormEncomendaComReferencia } from "@/components/encomendas/FormEncomendaComReferencia";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -73,7 +75,9 @@ export default function EncomendasPage() {
           </div>
 
           <div className="lg:col-span-8">
-            <FormEncomenda />
+            <Suspense fallback={<FormEncomenda />}>
+              <FormEncomendaComReferencia />
+            </Suspense>
           </div>
         </div>
       </Section>

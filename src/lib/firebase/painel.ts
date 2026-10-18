@@ -87,6 +87,7 @@ export type DadosCriacao = Pick<
   | "youtubeUrl"
   | "tiktokUrl"
   | "mercadoLivreUrl"
+  | "customizable"
 >;
 
 export class SlugEmUsoError extends Error {}

@@ -23,6 +23,8 @@ export function docParaCriacao(id: string, dados: CriacaoDoc): Criacao {
     // Um serverTimestamp ainda não confirmado chega como null.
     createdAt: dados.createdAt?.toDate().toISOString() ?? new Date(0).toISOString(),
     updatedAt: dados.updatedAt?.toDate().toISOString() ?? new Date(0).toISOString(),
+    // Criações anteriores à opção aceitam encomenda sob medida.
+    customizable: dados.customizable ?? true,
     demo: false,
   };
 }

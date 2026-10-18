@@ -54,8 +54,19 @@ type Arquivo3dSelecionado = { arquivo: File; enviadoEm?: string };
 const campoBase =
   "mt-2 block w-full border bg-white px-3 py-2.5 text-base focus:border-grafite focus-visible:outline-2 focus-visible:outline-laranja";
 
-export function FormEncomenda() {
-  const [campos, setCampos] = useState<CamposEncomenda>(VAZIO);
+/** Produto de onde o cliente veio pelo botão "Encomendar sob medida". */
+export type ReferenciaDeProduto = { slug: string; titulo: string };
+
+function textoDaReferencia(referencia: ReferenciaDeProduto): string {
+  return `Quero uma versão sob medida de "${referencia.titulo}" (página: /criacoes/${referencia.slug}).\n\n`;
+}
+
+export function FormEncomenda({ referencia: referenciaInicial }: { referencia?: ReferenciaDeProduto } = {}) {
+  const [referencia, setReferencia] = useState(referenciaInicial ?? null);
+  // Já abre com a referência no texto, para o pedido chegar dizendo de qual produto partiu.
+  const [campos, setCampos] = useState<CamposEncomenda>(() =>
+    referenciaInicial ? { ...VAZIO, descricao: textoDaReferencia(referenciaInicial) } : VAZIO,
+  );
   const [erros, setErros] = useState<ErrosEncomenda>({});
   const [fotos, setFotos] = useState<FotoSelecionada[]>([]);
   const [erroFotos, setErroFotos] = useState<string | null>(null);
@@ -85,6 +96,17 @@ export function FormEncomenda() {
   function removerFoto(indice: number) {
     URL.revokeObjectURL(fotos[indice].previa);
     setFotos((atuais) => atuais.filter((_, i) => i !== indice));
+  }
+
+  function removerReferencia() {
+    if (!referencia) return;
+    const prefixo = textoDaReferencia(referencia);
+    setCampos((atuais) =>
+      atuais.descricao.startsWith(prefixo)
+        ? { ...atuais, descricao: atuais.descricao.slice(prefixo.length) }
+        : atuais,
+    );
+    setReferencia(null);
   }
 
   function alterar(campo: keyof CamposEncomenda, valor: string) {
@@ -228,6 +250,24 @@ export function FormEncomenda() {
           </p>
         )}
       </div>
+
+      {referencia && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-laranja bg-white px-4 py-3 text-sm">
+          <p>
+            <span className="block font-mono text-xs tracking-wider text-cinza uppercase">Pedido baseado em</span>
+            <a href={`/criacoes/${referencia.slug}`} className="font-bold underline-offset-4 hover:underline">
+              {referencia.titulo}
+            </a>
+          </p>
+          <button
+            type="button"
+            onClick={removerReferencia}
+            className="font-bold text-cinza underline-offset-4 hover:text-grafite hover:underline"
+          >
+            Remover
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Campo nome="nome" rotulo="Seu nome" erro={erros.nome}>
