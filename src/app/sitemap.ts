@@ -4,7 +4,9 @@ import { getCriacoes } from "@/lib/criacoes";
 import { getRegistros } from "@/lib/laboratorio";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const paginas = mainNav.map((item) => ({ url: `${siteConfig.url}${item.href === "/" ? "" : item.href}` }));
+  const paginas = [...mainNav, { href: "/privacidade" }].map((item) => ({
+    url: `${siteConfig.url}${item.href === "/" ? "" : item.href}`,
+  }));
 
   // Exemplos ficam fora do sitemap: não são produtos reais.
   const criacoes = (await getCriacoes())

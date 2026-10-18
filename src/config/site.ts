@@ -60,9 +60,9 @@ export const socialLinks: readonly SocialLink[] = [
   { label: "Instagram" },
 ];
 
-/** Páginas legais previstas, ainda não escritas. */
+/** Páginas legais. Sem `href`, a página ainda não existe e aparece "em breve". */
 export const legalLinks: readonly SocialLink[] = [
-  { label: "Política de privacidade" },
+  { label: "Política de privacidade", href: "/privacidade" },
   { label: "Termos de uso" },
 ];
 
@@ -75,4 +75,15 @@ export const perfisAtivos = socialLinks.filter(
 export const lojaDeModelos = {
   nome: "MakerWorld",
   href: PERFIL_MAKERWORLD,
+} as const;
+
+/**
+ * Responsável pelo tratamento dos dados pessoais (LGPD, art. 9º, III), exibido
+ * na política de privacidade. PREENCHER antes de publicar: nome da pessoa ou
+ * razão social, documento (CNPJ, se houver; opcional) e um e-mail de contato.
+ */
+export const responsavelPelosDados = {
+  nome: "",
+  documento: "",
+  email: "",
 } as const;

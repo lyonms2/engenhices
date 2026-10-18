@@ -441,7 +441,13 @@ export function FormEncomenda({ referencia: referenciaInicial }: { referencia?: 
           className="mt-0.5 size-5 shrink-0 accent-laranja"
         />
         <span className={cn(envio.tipo === "falhou" && !consentimento && "text-red-800")}>
-          Concordo que a Engenhices use estes dados apenas para analisar e responder a este pedido.
+          Concordo que a Engenhices use estes dados apenas para analisar e responder a este pedido,
+          como descrito na{" "}
+          <a href="/privacidade" target="_blank" className="font-bold underline underline-offset-4">
+            política de privacidade
+            <span className="sr-only"> (abre em nova aba)</span>
+          </a>
+          .
         </span>
       </label>
 

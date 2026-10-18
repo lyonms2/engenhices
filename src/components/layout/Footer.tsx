@@ -83,6 +83,16 @@ function ColunaLinks({
 
 /** Link que ainda não tem endereço aparece como texto, marcado "em breve". */
 function ItemExterno({ link }: { link: SocialLink }) {
+  if (link.href?.startsWith("/")) {
+    return (
+      <li>
+        <Link href={link.href} className="text-branco/80 transition-colors hover:text-laranja">
+          {link.label}
+        </Link>
+      </li>
+    );
+  }
+
   if (link.href) {
     return (
       <li>
